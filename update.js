@@ -158,15 +158,13 @@ function cmpVersion(a, b) {
   return 0;
 }
 
+// 固定使用中国时区（Asia/Shanghai, +08:00），避免依赖运行机器的本地时区
 function localStamp() {
   const d = new Date();
-  const off = -d.getTimezoneOffset();
-  const sign = off >= 0 ? '+' : '-';
-  const abs = Math.abs(off);
-  const hh = String(Math.floor(abs / 60)).padStart(2, '0');
-  const mm = String(abs % 60).padStart(2, '0');
+  const utcMs = d.getTime() + d.getTimezoneOffset() * 60000;
+  const cn = new Date(utcMs + 8 * 3600000);
   const p = n => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}${sign}${hh}:${mm}`;
+  return `${cn.getFullYear()}-${p(cn.getMonth() + 1)}-${p(cn.getDate())}T${p(cn.getHours())}:${p(cn.getMinutes())}:${p(cn.getSeconds())}+08:00`;
 }
 
 function dumpJson(file, data) {

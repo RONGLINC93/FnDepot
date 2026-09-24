@@ -18,7 +18,7 @@ import json
 import re
 import shutil
 import sys
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -43,9 +43,12 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+# 固定使用中国时区（Asia/Shanghai, +08:00），避免依赖运行机器的本地时区
+_CN_TZ = timezone(timedelta(hours=8))
+
+
 def local_stamp() -> str:
-    stamp = datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M:%S%z")
-    return stamp[:-2] + ":" + stamp[-2:]
+    return datetime.now(_CN_TZ).strftime("%Y-%m-%dT%H:%M:%S+08:00")
 
 
 def dump_json(path: Path, data: dict) -> None:
