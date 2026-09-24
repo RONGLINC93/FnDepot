@@ -1,0 +1,13 @@
+.env
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# FPK 安装包默认随仓库提交；若改用 GitHub Release 托管，取消下面一行的注释
+# packages/*.fpk

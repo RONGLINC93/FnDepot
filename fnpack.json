@@ -1,0 +1,16 @@
+{
+  "schema_version": "2",
+  "source_info": {
+    "name": "我的应用源",
+    "author": "RONGLINC93",
+    "homepage": "https://github.com/RONGLINC93/FnDepot",
+    "description": "飞牛 fnOS 第三方应用源",
+    "i18n": {
+      "en-US": {
+        "name": "My App Source",
+        "description": "A third-party app source for fnOS."
+      }
+    }
+  },
+  "apps": {}
+}

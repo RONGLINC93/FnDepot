@@ -1,0 +1,32 @@
+{
+  "app_name": "sample.app",
+  "display_name": "示例应用",
+  "desc": "这是一个应用详情文件模板。复制后修改字段，并在根目录 fnpack.json 的 apps 中注册即可。",
+  "platform": ["all"],
+  "categories": ["系统工具"],
+  "icon_url": "../assets/icons/sample.app.png",
+  "preview_urls": [],
+  "readme_url": "",
+  "bug_report_url": "",
+  "maintainer": "示例开发者",
+  "maintainer_url": "",
+  "distributor": "",
+  "distributor_url": "",
+  "run_as": "package",
+  "install_type": "",
+  "is_docker": false,
+  "service_port": "",
+  "releases": {
+    "1.0.0": {
+      "changelog": "首个版本。",
+      "updated_at": "2026-09-24T00:00:00+08:00",
+      "packages": {
+        "all": {
+          "download_url": "../packages/sample.app-1.0.0-all.fpk",
+          "sha256": "",
+          "size": 0
+        }
+      }
+    }
+  }
+}
