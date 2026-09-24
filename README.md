@@ -10,44 +10,63 @@ https://github.com/RONGLINC93/FnDepot
 
 或直接填 `fnpack.json` 的直链。
 
+- 中文界面源名称：**我的应用源**
+- 英文界面源名称：**RONGLINC93 App Source**
+
+## 已收录应用
+
+| 应用名 | 显示名 | 分类 | 版本 | 端口 |
+| --- | --- | --- | --- | --- |
+| `student-management-system` | 学生管理系统 | 教育学习 | 1.4.15 | 3000 |
+| `umweb` | 音乐解锁 | 影音娱乐 | 1.10.8 | 9520 |
+| `reminder` | 提醒 | 生活服务 | 1.0.3 | 9530 |
+
+应用安装包以 GitHub Release 直链形式提供，元数据自动从各仓库 FPK 内的 `manifest` 同步。
+
 ## 目录结构
 
 ```
 FnDepot/
 |-- fnpack.json                 # 主源索引（必需，文件名不可更改）
+|-- 推送.bat / 拉取.bat / 更新.bat   # 薄壳，分别调用同名 .js
+|-- push.js / pull.js / update.js    # 推送 / 拉取 / 自动更新逻辑
 |-- apps/                       # 应用详情文件（拆分模式）
 |   `-- <appname>.json
 |-- assets/
 |   |-- icons/                  # 应用图标，建议 PNG/WebP，< 500KB
 |   `-- previews/               # 预览图，单张 < 2MB，每应用最多 8 张
-|-- packages/                   # FPK 安装包
-|   `-- <appname>-<version>-<arch>.fpk
+|-- packages/                   # 本仓库自托管的 FPK 安装包（可选）
 |-- templates/
 |   `-- app.template.json       # 详情文件模板
 |-- scripts/
 |   |-- validate.py             # 规范校验
 |   |-- sync_meta.py            # 回填 sha256 / size
 |   `-- addapp.py               # 新增应用或版本
+|-- .env.example                # 凭证模板（复制为 .env 后填写）
 `-- .github/workflows/validate.yml
 ```
 
-## 快速开始
+## 首次使用
 
-1. 修改 `fnpack.json` 中的 `source_info`（`name`、`author`、`homepage`）。
-2. 放入你的 FPK 并注册应用：
+1. 复制 `.env.example` 为 `.env`，填入：
+   - `GITHUB_REPO_URL`：本仓库地址，以 `.git` 结尾。
+   - `GITHUB_TOKEN`：Fine-grained token，需具备 Contents 读写权限。
+   - `.env` 已被 `.gitignore` 忽略，不会提交。
+2. 保证已安装 `git`、`python`、`node`（双击 `.bat` 时自动调用）。
 
-   ```powershell
-   python scripts/addapp.py --name sample.app --display "示例应用" `
-       --desc "一句话简介" --category 系统工具 --version 1.0.0 `
-       --fpk D:\downloads\sample.fpk --icon D:\downloads\icon.png --port 8080
-   ```
+## 日常操作
 
-3. 校验并推送：
+| 操作 | 命令 | 说明 |
+| --- | --- | --- |
+| 自动更新 | 双击 `更新.bat` | 扫描账号下所有仓库的 Release，把带 `.fpk` 的应用同步进本源 |
+| 校验 | `python scripts/validate.py` | 校验结构、必填字段、分类/平台/架构，核对 `size`/`sha256` |
+| 推送 | 双击 `推送.bat` | 校验 → `git add -A` → 提交 → 推送当前分支 |
+| 拉取 | 双击 `拉取.bat` | 拉取当前分支并校验一次 |
+| 手动新增 | `python scripts/addapp.py --help` | 把本地 FPK 注册进本源 |
 
-   ```powershell
-   python scripts/validate.py
-   git add -A && git commit -m "feat: add sample.app 1.0.0" && git push
-   ```
+`更新.bat` 工作方式：读取 `.env` 用户名 → 遍历其仓库 Release → 下载 `.fpk` 解析包内 `manifest` 得到 `appname`/`version`/`display_name`/`service_port` 等 → 写入 `apps/<appname>.json` 并在 `fnpack.json` 注册，`sha256`/`size` 取自 Release 资产。已存在的应用只刷新版本与安装包，保留分类、图标等人工字段。
+
+> 新应用分类需预先在 `update.js` 顶部的 `CATEGORY_HINT` 登记，否则归入「系统工具」并提示手动调整。
 
 ## 应用字段速查
 
@@ -56,37 +75,21 @@ FnDepot/
 | `display_name` / `desc` | 显示名称与简介，`desc` 支持 HTML |
 | `platform` | `all` / `x86` / `arm` |
 | `categories` | 只能取九个固定分类，最多两个：`影音娱乐、系统工具、编程开发、AI赋能、生活服务、智能智控、教育学习、游戏地带、硬件驱动` |
-| `icon_url` | 图标地址，支持相对路径 |
+| `icon_url` | 图标地址，支持相对或绝对 URL |
 | `run_as` | `package` 或 `root` |
 | `install_type` | `""` 存储空间，`"root"` 系统空间 |
 | `is_docker` | 是否 Docker 应用 |
 | `service_port` | 默认服务端口，无端口填空字符串 |
 | `releases.<version>.packages.<arch>` | 架构键只允许 `all` / `x86` / `arm`，需填 `download_url`、`sha256`、`size` |
 
-应用名（也就是 `apps` 的键名）必须与 FPK manifest 的 `appname` 完全一致且区分大小写。
+应用名（即 `apps` 的键名）必须与 FPK manifest 的 `appname` 完全一致且区分大小写。
 
-## 两种组织方式
+## 组织方式
 
+- **拆分模式（本仓库采用）**：`fnpack.json` 只保留索引，每个应用一个 `apps/<appname>.json`，详情内的相对 URL 相对该文件所在目录解析。
 - **单文件模式**：所有应用信息直接写在 `fnpack.json` 的 `apps` 中，适合应用很少的源。
-- **拆分模式（推荐）**：`fnpack.json` 只保留索引，每个应用一个 `apps/<appname>.json`。详情文件中的相对 URL 相对详情文件所在目录解析，本仓库模板已按此处理（`../packages/...`）。
 
-## 推送与拉取
-
-首次使用：复制 `.env.example` 为 `.env`，填入 `GITHUB_REPO_URL` 与 `GITHUB_TOKEN`（Fine-grained token，需 Contents 读写权限）。`.env` 已被 `.gitignore` 忽略。
-
-- 双击 `推送.bat`（或 `node push.js "提交说明"`）：校验应用源 → `git add -A` → 提交 → 推送当前分支。
-- 双击 `拉取.bat`（或 `node pull.js`）：从远端拉取当前分支，随后校验一次应用源。
-- 双击 `更新.bat`（或 `node update.js`）：自动扫描账号下所有仓库的 Release，把带 `.fpk` 的应用同步进本源。
-
-`更新.bat` 的工作方式：读取 `.env` 中的用户名 → 遍历其仓库的 Release → 下载 `.fpk` 并解析包内 `manifest`，得到 `appname`、`version`、`display_name`、`desc`、`service_port`、`maintainer` 等 → 写入 `apps/<appname>.json` 并在 `fnpack.json` 注册。`sha256` 与 `size` 取自 Release 资产。
-
-- 已存在的应用会保留人工字段（分类、图标、简介），只刷新版本、`download_url`、`sha256`、`size`。
-- 新应用若未在 `update.js` 的 `CATEGORY_HINT` 中登记分类，会暂归「系统工具」并在控制台提示，需手动改 `apps/<appname>.json`。
-- 首次接入后建议执行 `python scripts/validate.py`，再运行 `推送.bat`。
-
-提交说明省略时自动使用「更新应用源 + 当前时间」。推送被拒时先运行 `拉取.bat` 同步再推送。
-
-## 脚本
+## 脚本参考
 
 | 命令 | 作用 |
 | --- | --- |
@@ -94,6 +97,9 @@ FnDepot/
 | `python scripts/sync_meta.py` | 自动回填仓库内安装包的 `size` 与 `sha256` |
 | `python scripts/sync_meta.py --check` | 只检查是否缺失，不写回（CI 用） |
 | `python scripts/addapp.py --help` | 新增应用或新版本 |
+| `node update.js` | 自动扫描账号仓库 Release，同步应用源 |
+| `node push.js [提交说明]` | 校验并提交推送 |
+| `node pull.js` | 拉取远端并校验 |
 
 ## 发布前检查
 
