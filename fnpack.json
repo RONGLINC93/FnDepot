@@ -12,5 +12,18 @@
       }
     }
   },
-  "apps": {}
+  "apps": {
+    "student-management-system": {
+      "details_url": "apps/student-management-system.json",
+      "details_updated_at": "2026-09-24T20:15:00+08:00"
+    },
+    "umweb": {
+      "details_url": "apps/umweb.json",
+      "details_updated_at": "2026-09-24T20:15:00+08:00"
+    },
+    "reminder": {
+      "details_url": "apps/reminder.json",
+      "details_updated_at": "2026-09-24T20:15:00+08:00"
+    }
+  }
 }
