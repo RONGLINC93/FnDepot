@@ -5,7 +5,7 @@
 用户可在 FnDepot 客户端的「源管理 → 添加源」中填入本仓库地址：
 
 ```
-https://github.com/<你的用户名>/FnDepot
+https://github.com/RONGLINC93/FnDepot
 ```
 
 或直接填 `fnpack.json` 的直链。
