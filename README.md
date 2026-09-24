@@ -76,6 +76,13 @@ FnDepot/
 
 - 双击 `推送.bat`（或 `node push.js "提交说明"`）：校验应用源 → `git add -A` → 提交 → 推送当前分支。
 - 双击 `拉取.bat`（或 `node pull.js`）：从远端拉取当前分支，随后校验一次应用源。
+- 双击 `更新.bat`（或 `node update.js`）：自动扫描账号下所有仓库的 Release，把带 `.fpk` 的应用同步进本源。
+
+`更新.bat` 的工作方式：读取 `.env` 中的用户名 → 遍历其仓库的 Release → 下载 `.fpk` 并解析包内 `manifest`，得到 `appname`、`version`、`display_name`、`desc`、`service_port`、`maintainer` 等 → 写入 `apps/<appname>.json` 并在 `fnpack.json` 注册。`sha256` 与 `size` 取自 Release 资产。
+
+- 已存在的应用会保留人工字段（分类、图标、简介），只刷新版本、`download_url`、`sha256`、`size`。
+- 新应用若未在 `update.js` 的 `CATEGORY_HINT` 中登记分类，会暂归「系统工具」并在控制台提示，需手动改 `apps/<appname>.json`。
+- 首次接入后建议执行 `python scripts/validate.py`，再运行 `推送.bat`。
 
 提交说明省略时自动使用「更新应用源 + 当前时间」。推送被拒时先运行 `拉取.bat` 同步再推送。
 

@@ -2,8 +2,12 @@
   "app_name": "reminder",
   "display_name": "提醒",
   "desc": "事件 / 生日 / 办事 / 纪念日提醒网站，支持农历、重复规则、提前提醒，并可推送到企业微信、QQ、微信与自定义接口。",
-  "platform": ["all"],
-  "categories": ["生活服务"],
+  "platform": [
+    "all"
+  ],
+  "categories": [
+    "生活服务"
+  ],
   "icon_url": "https://raw.githubusercontent.com/RONGLINC93/reminder/main/fnos/reminder/ICON_256.PNG",
   "readme_url": "https://raw.githubusercontent.com/RONGLINC93/reminder/main/README.md",
   "bug_report_url": "https://github.com/RONGLINC93/reminder/issues",

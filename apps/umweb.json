@@ -2,8 +2,12 @@
   "app_name": "umweb",
   "display_name": "音乐解锁",
   "desc": "音乐解锁 Web 版，在浏览器中解锁已购的加密音乐（ncm / qmc / mgg / mflac 等），纯前端运行，无需服务器。",
-  "platform": ["all"],
-  "categories": ["影音娱乐"],
+  "platform": [
+    "all"
+  ],
+  "categories": [
+    "影音娱乐"
+  ],
   "icon_url": "https://raw.githubusercontent.com/RONGLINC93/um-web/main/fnos/umweb/ICON_256.PNG",
   "readme_url": "https://raw.githubusercontent.com/RONGLINC93/um-web/main/README.md",
   "bug_report_url": "https://github.com/RONGLINC93/um-web/issues",

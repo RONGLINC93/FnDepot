@@ -2,8 +2,12 @@
   "app_name": "student-management-system",
   "display_name": "学生管理系统",
   "desc": "纯 Node.js 学生管理系统，覆盖学籍档案、班级年级、教师档案、多科目成绩、考勤操行、请假、通知公告、成绩分析、宿舍安排与智能分班，数据以 JSON 本地持久化，开箱即用。",
-  "platform": ["all"],
-  "categories": ["教育学习"],
+  "platform": [
+    "all"
+  ],
+  "categories": [
+    "教育学习"
+  ],
   "icon_url": "https://raw.githubusercontent.com/RONGLINC93/Student-Management-System/main/fnos/student-management-system/ICON_256.PNG",
   "readme_url": "https://raw.githubusercontent.com/RONGLINC93/Student-Management-System/main/README.md",
   "bug_report_url": "https://github.com/RONGLINC93/Student-Management-System/issues",
