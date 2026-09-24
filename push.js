@@ -79,7 +79,10 @@ console.log(`正在推送 ${branch} 分支到 GitHub...`);
 try {
   execFileSync('git', ['push', authUrl, branch], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
   // 刷新远程跟踪引用，保证 git status 的领先/落后显示准确
-  execFileSync('git', ['fetch', 'origin'], { cwd: ROOT, stdio: 'ignore' });
+  // 仓库可能没有名为 origin 的 remote，这里直接用带令牌的地址，失败也不影响推送结果
+  try {
+    execFileSync('git', ['fetch', authUrl, branch], { cwd: ROOT, stdio: 'ignore' });
+  } catch (_) { /* 忽略 fetch 失败 */ }
   console.log('推送成功');
 } catch (e) {
   const out = ((e.stdout || '') + (e.stderr || '')).toString();
