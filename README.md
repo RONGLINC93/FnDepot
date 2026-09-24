@@ -10,7 +10,7 @@ https://github.com/RONGLINC93/FnDepot
 
 或直接填 `fnpack.json` 的直链。
 
-- 中文界面源名称：**我的应用源**
+- 中文界面源名称：**RONGLINC93的应用源**
 - 英文界面源名称：**RONGLINC93 App Source**
 
 ## 已收录应用
