@@ -55,6 +55,18 @@
           "size": 996455
         }
       }
+    },
+    "1.0.6": {
+      "changelog": "首个版本：日历与列表视图、农历提醒、重复规则、提前提醒与多通道通知推送。",
+      "updated_at": "2026-09-29T16:51:30+08:00",
+      "os_min_version": "1.1.8",
+      "packages": {
+        "all": {
+          "download_url": "https://github.com/RONGLINC93/reminder/releases/download/v1.0.6/reminder-1.0.6.fpk",
+          "sha256": "3982677ca22dd3032992c1d535773e31c3a1494c2c6b2e3dbaa85b052a57555d",
+          "size": 998655
+        }
+      }
     }
   }
 }
