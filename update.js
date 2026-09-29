@@ -184,6 +184,7 @@ function dumpJson(file, data) {
 
   const added = [];
   const updated = [];
+  const notesRefreshed = [];
   const skipped = [];
 
   for (const repo of repos) {
@@ -197,114 +198,118 @@ function dumpJson(file, data) {
       continue;
     }
 
-    // 取最新一个（非草稿）且带 .fpk 资产的 Release
-    let hit = null;
+    // 遍历该仓库所有「非草稿且带 .fpk 资产」的 Release，逐版本同步「更新说明」
     for (const rel of releases) {
       if (rel.draft) continue;
       const asset = (rel.assets || []).find(a => /\.fpk$/i.test(a.name));
-      if (asset) {
-        hit = { rel, asset };
-        break;
+      if (!asset) continue;
+
+      let digest = (asset.digest || '').replace(/^sha256:/i, '');
+
+      let appname = null;
+      let manifest = {};
+      try {
+        const buf = (await request(asset.browser_download_url)).body;
+        const text = readFromTarGz(buf, ['manifest', 'manifest.json']);
+        manifest = parseManifest(text);
+        if (manifest.appname) {
+          appname = manifest.appname;
+        } else {
+          // manifest 缺失时按文件名兜底
+          appname = asset.name.replace(/-\d[\w.\-+]*\.fpk$/i, '');
+        }
+        // 优先用实际下载内容的哈希，其次用 Release 提供的 digest
+        if (!digest) digest = sha256(buf);
+      } catch (e) {
+        console.log(`  [跳过] ${repo.name} ${rel.tag_name}：下载或解析 FPK 失败（${e.message}）`);
+        continue;
       }
-    }
-    if (!hit) continue;
 
-    const { rel, asset } = hit;
-    let digest = (asset.digest || '').replace(/^sha256:/i, '');
+      const version = manifest.version || rel.tag_name.replace(/^v/, '');
+      // 更新说明优先级：GitHub Release 说明 > FPK manifest 的 changelog（方便直接在网页编辑）
+      const sourceChangelog = (rel.body || manifest.changelog || '').trim();
+      const detailRel = (apps[appname] && apps[appname].details_url) || `apps/${appname}.json`;
+      const detailPath = path.join(ROOT, detailRel);
 
-    let appname = null;
-    let manifest = {};
-    try {
-      const buf = (await request(asset.browser_download_url)).body;
-      const text = readFromTarGz(buf, ['manifest', 'manifest.json']);
-      manifest = parseManifest(text);
-      if (manifest.appname) {
-        appname = manifest.appname;
+      let detail;
+      if (fs.existsSync(detailPath)) {
+        detail = JSON.parse(fs.readFileSync(detailPath, 'utf-8'));
       } else {
-        // manifest 缺失时按文件名兜底
-        appname = asset.name.replace(/-\d[\w.\-+]*\.fpk$/i, '');
+        // 新应用：图标优先取仓库内的 ICON_256.PNG，取不到用 GitHub 头像兜底
+        let icon = `https://raw.githubusercontent.com/${repo.full_name}/${repo.default_branch}/fnos/${appname}/ICON_256.PNG`;
+        if (await head(icon) !== 200) {
+          icon = `https://github.com/${OWNER}.png?size=256`;
+        }
+        const categories = CATEGORY_HINT[appname] || DEFAULT_CATEGORY;
+        detail = {
+          app_name: appname,
+          display_name: manifest.display_name || appname,
+          desc: manifest.desc || `${repo.name} 应用。`,
+          platform: [manifest.platform || 'all'],
+          categories,
+          icon_url: icon,
+          readme_url: `https://raw.githubusercontent.com/${repo.full_name}/${repo.default_branch}/README.md`,
+          bug_report_url: `https://github.com/${repo.full_name}/issues`,
+          maintainer: manifest.maintainer || OWNER,
+          maintainer_url: manifest.maintainer_url || `https://github.com/${repo.full_name}`,
+          distributor: OWNER,
+          distributor_url: `https://github.com/${repo.full_name}`,
+          run_as: 'package',
+          install_type: '',
+          is_docker: false,
+          service_port: manifest.service_port || '',
+          releases: {},
+        };
+        if (!CATEGORY_HINT[appname]) {
+          console.log(`  [注意] ${appname} 无分类提示，暂归入「系统工具」，请手动调整 apps/${appname}.json`);
+        }
       }
-      // 优先用实际下载内容的哈希，其次用 Release 提供的 digest
-      if (!digest) digest = sha256(buf);
-    } catch (e) {
-      console.log(`  [跳过] ${repo.name}：下载或解析 FPK 失败（${e.message}）`);
-      continue;
-    }
 
-    const version = manifest.version || rel.tag_name.replace(/^v/, '');
-    const detailRel = (apps[appname] && apps[appname].details_url) || `apps/${appname}.json`;
-    const detailPath = path.join(ROOT, detailRel);
-
-    let detail;
-    if (fs.existsSync(detailPath)) {
-      detail = JSON.parse(fs.readFileSync(detailPath, 'utf-8'));
-    } else {
-      // 新应用：图标优先取仓库内的 ICON_256.PNG，取不到用 GitHub 头像兜底
-      let icon = `https://raw.githubusercontent.com/${repo.full_name}/${repo.default_branch}/fnos/${appname}/ICON_256.PNG`;
-      if (await head(icon) !== 200) {
-        icon = `https://github.com/${OWNER}.png?size=256`;
-      }
-      const categories = CATEGORY_HINT[appname] || DEFAULT_CATEGORY;
-      detail = {
-        app_name: appname,
-        display_name: manifest.display_name || appname,
-        desc: manifest.desc || `${repo.name} 应用。`,
-        platform: [manifest.platform || 'all'],
-        categories,
-        icon_url: icon,
-        readme_url: `https://raw.githubusercontent.com/${repo.full_name}/${repo.default_branch}/README.md`,
-        bug_report_url: `https://github.com/${repo.full_name}/issues`,
-        maintainer: manifest.maintainer || OWNER,
-        maintainer_url: manifest.maintainer_url || `https://github.com/${repo.full_name}`,
-        distributor: OWNER,
-        distributor_url: `https://github.com/${repo.full_name}`,
-        run_as: 'package',
-        install_type: '',
-        is_docker: false,
-        service_port: manifest.service_port || '',
-        releases: {},
-      };
-      if (!CATEGORY_HINT[appname]) {
-        console.log(`  [注意] ${appname} 无分类提示，暂归入「系统工具」，请手动调整 apps/${appname}.json`);
-      }
-    }
-
-    const appReleases = detail.releases || (detail.releases = {});
-    const prev = appReleases[version];
-    const prevPkg = prev && prev.packages && prev.packages.all;
-    let changed = false;
-    if (prevPkg && prevPkg.sha256 && prevPkg.sha256 === digest) {
-      skipped.push(`${appname} ${version}（无变化）`);
-    } else {
-      appReleases[version] = {
-        changelog: manifest.changelog || rel.body || `更新到 ${version}。`,
-        updated_at: localStamp(),
-        os_min_version: manifest.os_min_version || '',
-        packages: {
-          all: {
-            download_url: asset.browser_download_url,
-            sha256: digest,
-            size: asset.size,
+      const appReleases = detail.releases || (detail.releases = {});
+      const prev = appReleases[version];
+      const prevPkg = prev && prev.packages && prev.packages.all;
+      let changed = false;
+      if (prevPkg && prevPkg.sha256 && prevPkg.sha256 === digest) {
+        // 版本与安装包无变化：仅当远端「更新说明」与本地不一致时刷新 changelog
+        if (sourceChangelog && prev.changelog !== sourceChangelog) {
+          prev.changelog = sourceChangelog;
+          prev.updated_at = localStamp();
+          notesRefreshed.push(`${appname} ${version}`);
+          changed = true;
+        } else {
+          skipped.push(`${appname} ${version}（无变化）`);
+        }
+      } else {
+        appReleases[version] = {
+          changelog: sourceChangelog || `更新到 ${version}。`,
+          updated_at: localStamp(),
+          os_min_version: manifest.os_min_version || '',
+          packages: {
+            all: {
+              download_url: asset.browser_download_url,
+              sha256: digest,
+              size: asset.size,
+            },
           },
-        },
-      };
-      (prev ? updated : added).push(`${appname} ${version}`);
-      changed = true;
+        };
+        (prev ? updated : added).push(`${appname} ${version}`);
+        changed = true;
+      }
+
+      detail.display_name = detail.display_name || manifest.display_name || appname;
+      if (manifest.service_port && !detail.service_port) detail.service_port = manifest.service_port;
+
+      fs.mkdirSync(path.dirname(detailPath), { recursive: true });
+      dumpJson(detailPath, detail);
+
+      // 仅在首次注册或内容变化时刷新时间戳，避免每次运行都产生无意义的提交
+      if (!apps[appname] || apps[appname].details_url !== detailRel) {
+        apps[appname] = { details_url: detailRel, details_updated_at: localStamp() };
+      } else if (changed) {
+        apps[appname].details_updated_at = localStamp();
+      }
+      console.log(`  已处理 ${repo.name} ${version} -> ${appname} ${version}`);
     }
-
-    detail.display_name = detail.display_name || manifest.display_name || appname;
-    if (manifest.service_port && !detail.service_port) detail.service_port = manifest.service_port;
-
-    fs.mkdirSync(path.dirname(detailPath), { recursive: true });
-    dumpJson(detailPath, detail);
-
-    // 仅在首次注册或内容变化时刷新时间戳，避免每次运行都产生无意义的提交
-    if (!apps[appname] || apps[appname].details_url !== detailRel) {
-      apps[appname] = { details_url: detailRel, details_updated_at: localStamp() };
-    } else if (changed) {
-      apps[appname].details_updated_at = localStamp();
-    }
-    console.log(`  已处理 ${repo.name} -> ${appname} ${version}`);
   }
 
   dumpJson(sourcePath, source);
@@ -312,6 +317,7 @@ function dumpJson(file, data) {
   console.log('');
   console.log(`新增应用 ${added.length} 个：${added.join('、') || '无'}`);
   console.log(`更新版本 ${updated.length} 个：${updated.join('、') || '无'}`);
+  console.log(`刷新更新说明 ${notesRefreshed.length} 个：${notesRefreshed.join('、') || '无'}`);
   console.log(`无变化 ${skipped.length} 个：${skipped.join('、') || '无'}`);
   console.log('');
   console.log('下一步：运行 python scripts/validate.py 校验，再运行 推送.bat。');

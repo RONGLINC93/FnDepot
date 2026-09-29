@@ -15,15 +15,15 @@
   "apps": {
     "student-management-system": {
       "details_url": "apps/student-management-system.json",
-      "details_updated_at": "2026-09-24T20:15:00+08:00"
+      "details_updated_at": "2026-09-29T17:05:42+08:00"
     },
     "umweb": {
       "details_url": "apps/umweb.json",
-      "details_updated_at": "2026-09-24T20:15:00+08:00"
+      "details_updated_at": "2026-09-29T17:05:44+08:00"
     },
     "reminder": {
       "details_url": "apps/reminder.json",
-      "details_updated_at": "2026-09-29T16:51:30+08:00"
+      "details_updated_at": "2026-09-29T17:05:35+08:00"
     }
   }
 }
