@@ -1,0 +1,182 @@
+:root {
+  --bg: #0f1115;
+  --panel: #171a21;
+  --panel-2: #1e222b;
+  --border: #2a2f3a;
+  --text: #e6e9ef;
+  --muted: #9aa3b2;
+  --accent: #4f8cff;
+  --accent-2: #36c98d;
+  --danger: #ff5d5d;
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.brand { display: flex; align-items: center; gap: 12px; }
+.logo {
+  width: 40px; height: 40px;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff; font-weight: 800; border-radius: 10px;
+}
+.brand-text h1 { font-size: 18px; margin: 0; }
+.brand-text p { font-size: 12px; margin: 0; color: var(--muted); }
+
+.tabs { display: flex; gap: 8px; }
+.tab {
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--border); padding: 8px 16px;
+  border-radius: 8px; cursor: pointer; font-size: 14px;
+  transition: .15s;
+}
+.tab:hover { color: var(--text); border-color: var(--accent); }
+.tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+.view { display: none; }
+.view.active { display: block; }
+
+.summary {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  margin-bottom: 20px; color: var(--muted); font-size: 13px;
+}
+.summary .chip {
+  background: var(--panel); border: 1px solid var(--border);
+  padding: 6px 12px; border-radius: 999px;
+}
+.summary .chip b { color: var(--text); }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.card-head { display: flex; gap: 12px; align-items: center; }
+.app-icon {
+  width: 56px; height: 56px; border-radius: 12px;
+  object-fit: cover; background: var(--panel-2);
+  flex: 0 0 auto;
+}
+.app-icon-fallback {
+  width: 56px; height: 56px; border-radius: 12px;
+  display: grid; place-items: center;
+  background: var(--panel-2); color: var(--muted);
+  font-size: 22px; font-weight: 700; flex: 0 0 auto;
+}
+.card-title { font-size: 16px; font-weight: 700; }
+.card-sub { font-size: 12px; color: var(--muted); }
+.desc { font-size: 13px; color: var(--muted); min-height: 38px; }
+
+.badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.badge {
+  font-size: 11px; padding: 2px 8px; border-radius: 6px;
+  background: var(--panel-2); border: 1px solid var(--border); color: var(--muted);
+}
+
+.meta-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+.latest-tag { color: var(--accent-2); font-weight: 600; }
+
+.links { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; }
+.links a { color: var(--accent); text-decoration: none; }
+.links a:hover { text-decoration: underline; }
+
+.btn {
+  background: var(--panel-2); color: var(--text);
+  border: 1px solid var(--border); padding: 9px 16px;
+  border-radius: 8px; cursor: pointer; font-size: 14px; transition: .15s;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.tiny { padding: 4px 10px; font-size: 12px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.toggle-versions {
+  background: transparent; border: none; color: var(--accent);
+  cursor: pointer; font-size: 12px; padding: 0; text-align: left;
+}
+
+.versions { display: none; flex-direction: column; gap: 8px; margin-top: 4px; }
+.versions.open { display: flex; }
+.ver-item {
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
+  background: var(--panel-2); font-size: 12px;
+}
+.ver-item .ver-top { display: flex; justify-content: space-between; align-items: center; }
+.ver-item .ver-name { font-weight: 700; color: var(--text); }
+.ver-item .ver-date { color: var(--muted); }
+.ver-item .changelog {
+  margin-top: 6px; color: var(--muted); white-space: pre-wrap;
+  max-height: 120px; overflow: auto; font-size: 11px;
+}
+.ver-item a { color: var(--accent); text-decoration: none; }
+
+/* 更新管理 */
+.admin-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.status { font-size: 13px; color: var(--muted); }
+.status.running { color: var(--accent); }
+.status.ok { color: var(--accent-2); }
+.status.err { color: var(--danger); }
+
+.terminal {
+  margin-top: 18px; background: #0a0c10;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden;
+}
+.terminal-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+  font-size: 13px; color: var(--muted);
+}
+#log {
+  margin: 0; padding: 14px; height: 60vh; overflow: auto;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12.5px; color: #c8d0dc; white-space: pre-wrap; word-break: break-word;
+}
+#log .step { color: var(--accent); font-weight: 700; }
+#log .err { color: var(--danger); }
+
+.footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px; }
+
+/* 登录框 */
+.login-box {
+  max-width: 420px; margin: 40px auto; background: var(--panel);
+  border: 1px solid var(--border); border-radius: var(--radius); padding: 24px;
+}
+.login-box h2 { margin: 0 0 6px; font-size: 18px; }
+.login-hint { margin: 0 0 16px; color: var(--muted); font-size: 13px; }
+.login-row { display: flex; gap: 8px; }
+.login-row input {
+  flex: 1; background: var(--panel-2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 8px; padding: 9px 12px; font-size: 14px;
+}
+.login-row input:focus { outline: none; border-color: var(--accent); }
+.login-err { display: block; margin-top: 10px; color: var(--danger); font-size: 13px; min-height: 18px; }

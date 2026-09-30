@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FnDepot · 应用源管理</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">Fn</span>
+      <div class="brand-text">
+        <h1 id="sourceName">FnDepot</h1>
+        <p id="sourceDesc">飞牛 fnOS 第三方应用源</p>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="catalog">应用目录</button>
+      <button class="tab" data-tab="admin">更新管理</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- 应用目录 -->
+    <section id="catalog" class="view active">
+      <div class="summary" id="summary"></div>
+      <div class="grid" id="appGrid"></div>
+    </section>
+
+    <!-- 更新管理 -->
+    <section id="admin" class="view">
+      <div id="loginBox" class="login-box">
+        <h2>更新管理需要登录</h2>
+        <p class="login-hint">请输入管理密码（来自 .env 的 ADMIN_PASSWORD）</p>
+        <div class="login-row">
+          <input type="password" id="pwd" placeholder="管理密码" autocomplete="current-password" />
+          <button class="btn primary" id="loginBtn">登录</button>
+        </div>
+        <span class="login-err" id="loginErr"></span>
+      </div>
+
+      <div id="adminPanel" style="display:none">
+        <div class="admin-actions">
+          <button class="btn primary" data-action="oneclick">一键更新（更新 + 推送）</button>
+          <button class="btn" data-action="update">更新仓库（最新版）</button>
+          <button class="btn" data-action="deep">深度更新（全部版本）</button>
+          <button class="btn" data-action="push">推送到 GitHub</button>
+          <button class="btn tiny" id="logoutBtn">退出登录</button>
+          <span class="status" id="runStatus">空闲</span>
+        </div>
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span>运行日志</span>
+            <button class="btn tiny" id="clearLog">清空</button>
+          </div>
+          <pre id="log"></pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span id="footerInfo">FnDepot 应用源管理</span>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>
