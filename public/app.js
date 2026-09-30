@@ -231,14 +231,45 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
 });
 
 // ---------------------------------------------------------------------------
-// 设置：GITHUB_TOKEN / GITHUB_REPO_URL / 登陆密码
+// 设置：GITHUB_TOKEN / GITHUB_REPO_URL / 登陆密码（模态框）
 // ---------------------------------------------------------------------------
+const settingsModal = document.getElementById('settingsModal');
+
+function openSettings() {
+  settingsModal.hidden = false;
+  document.getElementById('settingStatus').textContent = '';
+  document.getElementById('settingStatus').className = 'setting-status';
+  loadSettings();
+}
+function closeSettings() {
+  settingsModal.hidden = true;
+}
+document.getElementById('settingsBtn').addEventListener('click', openSettings);
+document.getElementById('settingsCloseBtn').addEventListener('click', closeSettings);
+document.getElementById('settingsCancelBtn').addEventListener('click', closeSettings);
+settingsModal.addEventListener('click', e => {
+  if (e.target === settingsModal) closeSettings();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !settingsModal.hidden) closeSettings();
+});
+
+function setBadge(id, ok, okText, noText) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = ok ? okText : noText;
+  el.className = 'set-badge' + (ok ? ' on' : '');
+}
+
 async function loadSettings() {
   try {
     const r = await fetch('/api/settings');
     if (!r.ok) return;
     const d = await r.json();
     document.getElementById('setRepo').value = d.github_repo_url || '';
+    setBadge('badgeToken', d.has_github_token, '已保存', '未保存');
+    setBadge('badgeRepo', !!d.github_repo_url, '已保存', '未保存');
+    setBadge('badgePassword', d.has_admin_password, '已自定义', '默认 admin');
     const hint = [];
     hint.push(d.has_github_token ? 'GITHUB_TOKEN 已设置' : 'GITHUB_TOKEN 未设置');
     hint.push(d.has_admin_password ? '已设置自定义登陆密码' : '登陆密码为默认 admin');
@@ -266,6 +297,7 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
     document.getElementById('setToken').value = '';
     document.getElementById('setPassword').value = '';
     loadSettings();
+    setTimeout(closeSettings, 900);
   } else {
     status.textContent = d.error || '保存失败';
     status.className = 'setting-status err';

@@ -46,29 +46,9 @@
           <button class="btn" data-action="update">更新仓库（最新版）</button>
           <button class="btn" data-action="deep">深度更新（全部版本）</button>
           <button class="btn" data-action="push">推送到 GitHub</button>
+          <button class="btn" id="settingsBtn">设置</button>
           <button class="btn tiny" id="logoutBtn">退出登录</button>
           <span class="status" id="runStatus">空闲</span>
-        </div>
-
-        <div class="settings-box">
-          <h3>设置</h3>
-          <div class="setting-row">
-            <label>GITHUB_TOKEN</label>
-            <input type="password" id="setToken" placeholder="留空表示不修改" autocomplete="off" />
-          </div>
-          <div class="setting-row">
-            <label>GITHUB_REPO_URL</label>
-            <input type="text" id="setRepo" placeholder="https://github.com/用户名/仓库.git" />
-          </div>
-          <div class="setting-row">
-            <label>登陆密码</label>
-            <input type="password" id="setPassword" placeholder="留空表示不修改" autocomplete="off" />
-          </div>
-          <div class="setting-actions">
-            <button class="btn primary" id="saveSettingsBtn">保存设置</button>
-            <span class="setting-status" id="settingStatus"></span>
-          </div>
-          <p class="setting-hint" id="settingHint"></p>
         </div>
 
         <div class="terminal">
@@ -81,6 +61,39 @@
       </div>
     </section>
   </main>
+
+  <!-- 设置模态框 -->
+  <div class="modal-overlay" id="settingsModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
+      <div class="modal-head">
+        <h3 id="settingsModalTitle">设置</h3>
+        <button class="modal-close" id="settingsCloseBtn" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-row">
+          <label>GITHUB_TOKEN</label>
+          <input type="password" id="setToken" placeholder="留空表示不修改" autocomplete="off" />
+          <span class="set-badge" id="badgeToken"></span>
+        </div>
+        <div class="setting-row">
+          <label>GITHUB_REPO_URL</label>
+          <input type="text" id="setRepo" placeholder="https://github.com/用户名/仓库.git" />
+          <span class="set-badge" id="badgeRepo"></span>
+        </div>
+        <div class="setting-row">
+          <label>登陆密码</label>
+          <input type="password" id="setPassword" placeholder="留空表示不修改" autocomplete="off" />
+          <span class="set-badge" id="badgePassword"></span>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <span class="setting-hint" id="settingHint"></span>
+        <span class="setting-status" id="settingStatus"></span>
+        <button class="btn" id="settingsCancelBtn">取消</button>
+        <button class="btn primary" id="saveSettingsBtn">保存设置</button>
+      </div>
+    </div>
+  </div>
 
   <footer class="footer">
     <span id="footerInfo">FnDepot 应用源管理</span>
