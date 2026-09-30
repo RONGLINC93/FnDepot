@@ -18,8 +18,8 @@ echo === Build fnOS fpk: FnDepot ===
 echo.
 
 echo [1/6] Check icon...
-if not exist "%PKG%\ICON.PNG" (
-  echo  ICON.PNG missing. Place a 256x256 icon at: %PKG%\ICON.PNG
+if not exist "%PKG%\ICON_256.PNG" (
+  echo  ICON_256.PNG missing. Place a 256x256 icon at: %PKG%\ICON_256.PNG
   goto fail
 )
 
