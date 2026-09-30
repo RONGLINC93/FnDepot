@@ -180,3 +180,22 @@ main { max-width: 1100px; margin: 0 auto; padding: 24px; }
 }
 .login-row input:focus { outline: none; border-color: var(--accent); }
 .login-err { display: block; margin-top: 10px; color: var(--danger); font-size: 13px; min-height: 18px; }
+
+/* 设置区块 */
+.settings-box {
+  margin-top: 18px; background: var(--panel); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px;
+}
+.settings-box h3 { margin: 0 0 12px; font-size: 15px; }
+.setting-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.setting-row label { width: 140px; font-size: 13px; color: var(--muted); flex: 0 0 auto; }
+.setting-row input {
+  flex: 1; background: var(--panel-2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 8px; padding: 9px 12px; font-size: 14px; min-width: 0;
+}
+.setting-row input:focus { outline: none; border-color: var(--accent); }
+.setting-actions { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+.setting-status { font-size: 13px; color: var(--muted); }
+.setting-status.ok { color: var(--accent-2); }
+.setting-status.err { color: var(--danger); }
+.setting-hint { margin: 10px 0 0; font-size: 12px; color: var(--muted); }

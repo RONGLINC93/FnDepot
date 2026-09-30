@@ -194,7 +194,7 @@ const loginErr = document.getElementById('loginErr');
 function showAdmin(authed) {
   loginBox.style.display = authed ? 'none' : 'block';
   adminPanel.style.display = authed ? 'block' : 'none';
-  if (authed) statusEl.textContent = '空闲';
+  if (authed) { statusEl.textContent = '空闲'; loadSettings(); }
 }
 
 async function checkAuth() {
@@ -228,6 +228,48 @@ pwdEl.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 document.getElementById('logoutBtn').addEventListener('click', async () => {
   await fetch('/api/logout', { method: 'POST' });
   showAdmin(false);
+});
+
+// ---------------------------------------------------------------------------
+// 设置：GITHUB_TOKEN / GITHUB_REPO_URL / 登陆密码
+// ---------------------------------------------------------------------------
+async function loadSettings() {
+  try {
+    const r = await fetch('/api/settings');
+    if (!r.ok) return;
+    const d = await r.json();
+    document.getElementById('setRepo').value = d.github_repo_url || '';
+    const hint = [];
+    hint.push(d.has_github_token ? 'GITHUB_TOKEN 已设置' : 'GITHUB_TOKEN 未设置');
+    hint.push(d.has_admin_password ? '已设置自定义登陆密码' : '登陆密码为默认 admin');
+    document.getElementById('settingHint').textContent = hint.join('；');
+  } catch (_) {}
+}
+
+document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
+  const status = document.getElementById('settingStatus');
+  status.textContent = '保存中…';
+  status.className = 'setting-status';
+  const r = await fetch('/api/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      github_token: document.getElementById('setToken').value,
+      github_repo_url: document.getElementById('setRepo').value,
+      admin_password: document.getElementById('setPassword').value,
+    }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (d.ok) {
+    status.textContent = '已保存';
+    status.className = 'setting-status ok';
+    document.getElementById('setToken').value = '';
+    document.getElementById('setPassword').value = '';
+    loadSettings();
+  } else {
+    status.textContent = d.error || '保存失败';
+    status.className = 'setting-status err';
+  }
 });
 
 function appendLog(text, cls) {

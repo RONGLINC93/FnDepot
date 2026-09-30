@@ -22,17 +22,40 @@ const PORT = process.env.PORT || 9555;
 
 // ---------------------------------------------------------------------------
 // 登录鉴权（仅保护「更新管理」相关接口，应用目录保持公开）
-//   - 密码取环境变量 ADMIN_PASSWORD（fnOS 部署时可在应用环境变量中配置）；
-//     注意：.env 仅本地开发使用，打包为 fpk 后不存在，故不依赖 .env。
-//   - 未设置时回退为 "admin" 并提示修改。
+//   - 密码优先取 Web 设置（settings.json）或环境变量 ADMIN_PASSWORD；
+//     均未设置时回退为 "admin"。
 //   - 登录后下发 HttpOnly 会话 Cookie，默认 7 天有效（服务端内存存储，重启即失效）
 // ---------------------------------------------------------------------------
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
-if (!process.env.ADMIN_PASSWORD) {
-  console.log('[提示] 未设置环境变量 ADMIN_PASSWORD，登录密码回退为默认 "admin"。部署到 fnOS 时请在应用环境变量中设置 ADMIN_PASSWORD。');
+const SETTINGS_FILE = path.join(ROOT, 'settings.json');
+
+// 读取 Web 设置（首次运行不存在时返回空对象）
+function loadSettings() {
+  try {
+    return JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+  } catch (_) {
+    return {};
+  }
 }
+
+const settings = loadSettings();
+
+let ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
 const SESSION_TTL = 7 * 24 * 60 * 60 * 1000; // 7 天
 const sessions = new Map(); // sid -> 过期时间戳
+
+// 把 Web 设置合并进运行环境：GITHUB_TOKEN / GITHUB_REPO_URL 注入环境变量（供
+// push.js / pull.js 子进程继承），admin_password 覆盖内存中的登录密码。
+// Web 设置优先于环境变量默认值，便于 fnOS 部署时无 .env 也能工作。
+function applySettings(s) {
+  if (s && s.github_token) process.env.GITHUB_TOKEN = s.github_token;
+  if (s && s.github_repo_url) process.env.GITHUB_REPO_URL = s.github_repo_url;
+  if (s && s.admin_password) ADMIN_PASSWORD = s.admin_password;
+}
+applySettings(settings);
+
+if (!process.env.ADMIN_PASSWORD && !settings.admin_password) {
+  console.log('[提示] 未设置管理密码，登录密码回退为默认 "admin"。可在「更新管理 → 设置」中修改。');
+}
 
 function parseCookies(req) {
   const out = {};
@@ -281,6 +304,47 @@ const server = http.createServer((req, res) => {
   if (p === '/api/me') {
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({ authenticated: authOk(req) }));
+    return;
+  }
+  if (p === '/api/settings') {
+    if (!authOk(req)) {
+      res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ error: '未登录' }));
+      return;
+    }
+    if (req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({
+        github_repo_url: settings.github_repo_url || '',
+        has_github_token: !!settings.github_token,
+        has_admin_password: !!settings.admin_password,
+      }));
+      return;
+    }
+    if (req.method === 'POST') {
+      readJsonBody(req).then(body => {
+        const next = Object.assign({}, settings);
+        if (typeof body.github_repo_url === 'string') next.github_repo_url = body.github_repo_url.trim();
+        if (typeof body.github_token === 'string' && body.github_token.length > 0) next.github_token = body.github_token;
+        if (typeof body.admin_password === 'string' && body.admin_password.length > 0) next.admin_password = body.admin_password;
+        try {
+          fs.writeFileSync(SETTINGS_FILE, JSON.stringify(next, null, 2), 'utf-8');
+        } catch (e) {
+          res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({ ok: false, error: '无法写入设置文件：' + e.message }));
+          return;
+        }
+        settings.github_repo_url = next.github_repo_url;
+        settings.github_token = next.github_token;
+        settings.admin_password = next.admin_password;
+        applySettings(settings);
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ ok: true }));
+      });
+      return;
+    }
+    res.writeHead(405, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify({ error: '方法不支持' }));
     return;
   }
   if (p === '/api/run') {

@@ -10,11 +10,21 @@ const { execFileSync, spawnSync } = require('child_process');
 
 const ROOT = __dirname;
 
-// 读取 .env 配置
+// 读取配置：优先 Web 设置（settings.json），其次 .env
 function loadEnv() {
+  const settingsPath = path.join(ROOT, 'settings.json');
+  if (fs.existsSync(settingsPath)) {
+    try {
+      const s = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+      const env = {};
+      if (s.github_token) env.GITHUB_TOKEN = s.github_token;
+      if (s.github_repo_url) env.GITHUB_REPO_URL = s.github_repo_url;
+      if (env.GITHUB_TOKEN && env.GITHUB_REPO_URL) return env;
+    } catch (_) { /* 解析失败则回退到 .env */ }
+  }
   const envPath = path.join(ROOT, '.env');
   if (!fs.existsSync(envPath)) {
-    console.error('[错误] 未找到 .env 文件，请先复制 .env.example 为 .env 并填写 GITHUB_REPO_URL 和 GITHUB_TOKEN');
+    console.error('[错误] 未找到 settings.json 或 .env 文件，请在「更新管理 → 设置」中填写 GITHUB_REPO_URL 和 GITHUB_TOKEN，或复制 .env.example 为 .env 填写。');
     process.exit(1);
   }
   const env = {};
