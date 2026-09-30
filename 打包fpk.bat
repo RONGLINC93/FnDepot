@@ -60,6 +60,17 @@ if not defined APPDISP (
 echo  display_name = %APPDISP%
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$c=Get-Content 'fnos\fndepot\manifest' -Encoding UTF8 -Raw; $c=$c -replace '(?m)^(display_name\s*=\s*).*', ('${1}' + '%APPDISP%'); [IO.File]::WriteAllText('fnos\fndepot\manifest', $c, [System.Text.UTF8Encoding]::new($false))"
 
+echo [3c/6] Ensure cmd/* lifecycle scripts are executable (requires Git Bash chmod) ...
+set "CHMOD="
+if exist "C:\Program Files\Git\usr\bin\chmod.exe" set "CHMOD=C:\Program Files\Git\usr\bin\chmod.exe"
+if not defined CHMOD if exist "C:\Program Files (x86)\Git\usr\bin\chmod.exe" set "CHMOD=C:\Program Files (x86)\Git\usr\bin\chmod.exe"
+if defined CHMOD (
+  "%CHMOD%" -R 755 "%PKG%\cmd" >nul 2>&1
+  echo  chmod +x applied to cmd scripts
+) else (
+  echo  Git Bash chmod not found; relying on fnpack to set permissions
+)
+
 echo [4/6] Normalize newlines to LF in pkg text files ...
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$cr=[char]13; $enc=[System.Text.UTF8Encoding]::new($false); Get-ChildItem '%PKG%' -Recurse -File | Where-Object { $_.Extension -notmatch '\.(png|fpk|zip|gz)$' } | ForEach-Object { $b=[IO.File]::ReadAllBytes($_.FullName); $hasBom=$b.Length -ge 3 -and $b[0] -eq 0xEF -and $b[1] -eq 0xBB -and $b[2] -eq 0xBF; $c=[IO.File]::ReadAllText($_.FullName); if ($hasBom -or $c.Contains($cr)) { [IO.File]::WriteAllText($_.FullName, $c.Replace([string]$cr, ''), $enc) } }"
 if errorlevel 1 goto fail

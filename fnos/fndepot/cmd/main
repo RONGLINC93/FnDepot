@@ -1,10 +1,134 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # ============================================================================
-# FnDepot 应用入口（fnOS 启动应用时调用 cmd/main）
-# 进入 app/server 并运行网站服务；监听 PORT（默认 9555）。
-# 注意：fnOS 部署时请通过应用环境变量设置 ADMIN_PASSWORD。
+# FnDepot 应用生命周期脚本（fnOS 启动 / 停止 / 状态）
+# 说明：cmd/main 是 fnOS 调用的入口；cmd/stop 为本脚本的 stop 包装。
 # ============================================================================
-set -e
-cd "$(dirname "$0")/../app/server"
-export PORT="${APP_PORT:-9555}"
-exec node server.js
+
+LOG_FILE="${TRIM_PKGVAR}/info.log"
+PID_FILE="${TRIM_PKGVAR}/app.pid"
+
+# fnOS 提供的 Node.js v20 运行时
+export PATH=/var/apps/nodejs_v20/target/bin:$PATH
+
+APP_DIR="${TRIM_APPDEST}/server"
+
+# 优先使用 config/resource 中声明的共享目录，否则回退到应用运行时数据目录
+DATA_DIR="${TRIM_DATA_SHARE_PATHS%%:*}"
+if [ -z "${DATA_DIR}" ]; then
+    DATA_DIR="${TRIM_PKGVAR}/data"
+fi
+
+PORT="${TRIM_SERVICE_PORT:-9555}"
+
+mkdir -p "${TRIM_PKGVAR}" >/dev/null 2>&1
+mkdir -p "${DATA_DIR}/data" >/dev/null 2>&1
+
+log_msg() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "${LOG_FILE}"
+}
+
+fail() {
+    log_msg "ERROR: $1"
+    if [ -n "${TRIM_TEMP_LOGFILE}" ]; then
+        echo "FnDepot：$1" > "${TRIM_TEMP_LOGFILE}"
+    fi
+    exit 1
+}
+
+check_process() {
+    local pid="$1"
+    kill -0 "${pid}" 2>/dev/null
+}
+
+status_process() {
+    if [ -f "${PID_FILE}" ]; then
+        local pid
+        pid="$(head -n 1 "${PID_FILE}" | tr -d '[:space:]')"
+        if [ -n "${pid}" ] && check_process "${pid}"; then
+            return 0
+        fi
+        rm -f "${PID_FILE}"
+    fi
+    return 1
+}
+
+start_process() {
+    if status_process; then
+        log_msg "process already running"
+        return 0
+    fi
+
+    command -v node >/dev/null 2>&1 || fail "未找到 Node.js 运行时（nodejs_v20）"
+
+    log_msg "Starting FnDepot process ..."
+
+    cd "${APP_DIR}" || fail "应用目录不存在：${APP_DIR}"
+
+    FNDEPOT_DATA_DIR="${DATA_DIR}/data" PORT="${PORT}" \
+        node server.js >> "${LOG_FILE}" 2>&1 &
+
+    printf "%s" "$!" > "${PID_FILE}"
+
+    sleep 2
+
+    if ! status_process; then
+        fail "服务启动失败，请查看日志：${LOG_FILE}"
+    fi
+
+    return 0
+}
+
+stop_process() {
+    log_msg "Stopping FnDepot process ..."
+
+    if [ ! -f "${PID_FILE}" ]; then
+        return 0
+    fi
+
+    local pid
+    pid="$(head -n 1 "${PID_FILE}" | tr -d '[:space:]')"
+
+    if [ -z "${pid}" ] || ! check_process "${pid}"; then
+        rm -f "${PID_FILE}"
+        return 0
+    fi
+
+    kill -TERM "${pid}" >> "${LOG_FILE}" 2>&1
+
+    local count=0
+    while check_process "${pid}" && [ "${count}" -lt 10 ]; do
+        sleep 1
+        count=$((count + 1))
+        log_msg "waiting process terminate... (${count}s/10s)"
+    done
+
+    if check_process "${pid}"; then
+        log_msg "send KILL signal to PID:${pid}..."
+        kill -KILL "${pid}" >> "${LOG_FILE}" 2>&1
+    fi
+
+    rm -f "${PID_FILE}"
+
+    return 0
+}
+
+case "$1" in
+    start|"" )
+        start_process
+        ;;
+    stop)
+        stop_process
+        ;;
+    status)
+        if status_process; then
+            exit 0
+        fi
+        exit 3
+        ;;
+    *)
+        if [ -n "${TRIM_TEMP_LOGFILE}" ]; then
+            echo "FnDepot：未知命令 $1" > "${TRIM_TEMP_LOGFILE}"
+        fi
+        exit 1
+        ;;
+esac
