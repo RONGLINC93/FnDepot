@@ -1,0 +1,11 @@
+{
+  "name": "FnDepot应用源管理",
+  "version": "0.1.0",
+  "description": "飞牛 fnOS 第三方应用源（外部应用源 V2 规范）的管理后台与 App 目录。",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "RONGLINC93",
+  "license": "MIT"
+}

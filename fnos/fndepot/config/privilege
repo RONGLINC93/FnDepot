@@ -1,0 +1,9 @@
+{
+  "network": {
+    "tcp": [9555]
+  },
+  "sharedfolder": [],
+  "crontab": false,
+  "devices": [],
+  "db": []
+}

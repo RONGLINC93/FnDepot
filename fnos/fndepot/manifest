@@ -1,0 +1,25 @@
+# ============================================================================
+# FnDepot fnOS 应用包描述文件（key = value 格式）
+# 版本号(version)与显示名(display_name)的唯一真源在仓库根 package.json；
+# 打包时由 打包fpk.bat 自动同步本文件的 version 与 display_name。
+# name/appname 为内部包标识(须为 ASCII，保持一致)，display_name 为用户可见的应用名。
+# 字段按飞牛 fnOS 规范填写，如与最新规范不符请按需调整。
+# ============================================================================
+appname = fndepot
+name = fndepot
+display_name = FnDepot应用源管理
+version = 0.1.0
+desc = 飞牛 fnOS 第三方应用源（外部应用源 V2 规范）的管理后台与 App 目录：可浏览已收录应用、在线触发「更新仓库 / 深度更新 / 推送」并实时查看日志。
+author = RONGLINC93
+maintainer = RONGLINC93
+maintainer_url = https://github.com/RONGLINC93/FnDepot
+distributor = RONGLINC93
+categories = 工具
+platform = all
+icon = ICON.PNG
+run_as = package
+source = local
+is_docker = false
+service_port = 9555
+architecture = noarch
+changelog = 首次提供 fnOS 安装包：内置网站服务（端口 9555）与管理后台。

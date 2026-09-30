@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# ============================================================================
+# FnDepot 应用入口（fnOS 启动应用时调用 cmd/main）
+# 进入 app/server 并运行网站服务；监听 PORT（默认 9555）。
+# 注意：fnOS 部署时请通过应用环境变量设置 ADMIN_PASSWORD。
+# ============================================================================
+set -e
+cd "$(dirname "$0")/../app/server"
+export PORT="${APP_PORT:-9555}"
+exec node server.js
