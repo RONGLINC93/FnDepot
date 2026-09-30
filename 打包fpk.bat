@@ -109,6 +109,7 @@ echo === Done: %OUT% ===
 echo  Install: upload it in the fnOS App Center, or over SSH run:
 echo  appcenter-cli install-fpk "%OUT%"
 echo.
+explorer "%OUTDIR%"
 goto endok
 
 :nofnpack
