@@ -79,7 +79,14 @@ set "RC=%ERRORLEVEL%"
 popd
 if not "%RC%"=="0" goto fail
 
-set "APPNAME=fndepot"
+echo Read appname from manifest ...
+node -e "const fs=require('fs');const t=fs.readFileSync('fnos/fndepot/manifest','utf8');const m=t.match(/^appname\s*=\s*(.+)$/m);process.stdout.write(m?m[1].trim():'')" > "%TEMP%\fpkapp.txt" 2>nul
+set /p APPNAME=<"%TEMP%\fpkapp.txt"
+if not defined APPNAME (
+  echo  Could not read appname from manifest
+  goto fail
+)
+echo  appname = %APPNAME%
 set "RAW=%PKG%\%APPNAME%.fpk"
 if not exist "%RAW%" goto fail
 if not exist "%OUTDIR%" mkdir "%OUTDIR%"
