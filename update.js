@@ -4,7 +4,8 @@
  * 再把新应用或新版本写入 fnpack.json 与 apps/*.json。
  *
  * 已存在应用的分类、图标等人工字段会被保留，不会被覆盖。
- * 用法：node update.js   （或双击 更新.bat）
+ * 用法：node update.js              （默认只同步每个仓库最新版本，或双击 更新仓库.bat）
+ *       node update.js --deep      （遍历全部 Release 做完整同步，或双击 深度更新仓库.bat）
  *
  * @author RONGLINC <chenronglin1993@hotmail.com>
  */
@@ -198,9 +199,15 @@ function dumpJson(file, data) {
       continue;
     }
 
-    // 遍历该仓库所有「非草稿且带 .fpk 资产」的 Release，逐版本同步「更新说明」
-    for (const rel of releases) {
-      if (rel.draft) continue;
+    // 默认只同步「最新」一个 Release（见 更新仓库.bat）；传入 --deep 则遍历全部
+    // Release 做完整同步（见 深度更新仓库.bat）。历史版本此前已写入 apps/*.json，
+    // 普通更新只需补最新版，可避免逐个下载历史 FPK 导致「更新仓库」越来越慢。
+    const DEEP = process.argv.includes('--deep');
+    const fpkReleases = releases
+      .filter(rel => !rel.draft && (rel.assets || []).some(a => /\.fpk$/i.test(a.name)))
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    const targets = DEEP ? fpkReleases : fpkReleases.slice(0, 1);
+    for (const rel of targets) {
       const asset = (rel.assets || []).find(a => /\.fpk$/i.test(a.name));
       if (!asset) continue;
 
