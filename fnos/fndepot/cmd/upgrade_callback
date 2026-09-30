@@ -3,4 +3,14 @@
 # FnDepot 升级完成回调（fnOS 升级后调用 cmd/upgrade_callback）
 # ============================================================================
 set -e
+# 旧版本把设置写在安装目录里，升级时该目录会被新版本替换。
+# 这里尽力把它迁移到 fnOS 的包变量目录（卸载时可按用户选择保留）。
+if [ -n "${TRIM_PKGVAR}" ]; then
+    DATA_DIR="${FNDEPOT_DATA_DIR:-${TRIM_PKGVAR}/data/data}"
+    LEGACY="${TRIM_APPDEST}/server/settings.json"
+    if [ -f "${LEGACY}" ] && [ ! -f "${DATA_DIR}/settings.json" ]; then
+        mkdir -p "${DATA_DIR}" >/dev/null 2>&1 || true
+        cp -f "${LEGACY}" "${DATA_DIR}/settings.json" >/dev/null 2>&1 || true
+    fi
+fi
 exit 0

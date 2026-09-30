@@ -28,4 +28,4 @@ ctl_stop = true
 os_min_version = 1.1.8
 desktop_applaunchname = fndepot-app-source.main
 architecture = noarch
-changelog = 修复应用桌面打开入口（补齐 desktop_uidir 与 app/ui/config）；内置网站服务（端口 9555）与管理后台。
+changelog = 应用设置改存到 fnOS 数据目录，卸载时可按用户选择保留（重装无需重填 Token）；修复桌面打开入口与窗口标题栏图标；设置界面改为模态框。

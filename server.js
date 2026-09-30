@@ -26,7 +26,30 @@ const PORT = process.env.PORT || 9555;
 //     均未设置时回退为 "admin"。
 //   - 登录后下发 HttpOnly 会话 Cookie，默认 7 天有效（服务端内存存储，重启即失效）
 // ---------------------------------------------------------------------------
-const SETTINGS_FILE = path.join(ROOT, 'settings.json');
+// 用户数据目录：cmd/main 启动服务时会注入 FNDEPOT_DATA_DIR（优先 config/resource
+// 声明的共享目录，回退到 TRIM_PKGVAR/data）。卸载时 fnOS 会按用户选择保留该目录，
+// 因此设置必须写在这里，而不是会被卸载删除的安装目录。
+// 本地直接 `node server.js` 时没有该变量，回退到脚本所在目录，行为与之前一致。
+function dataDir() {
+  const d = process.env.FNDEPOT_DATA_DIR || process.env.TRIM_PKGVAR;
+  if (d) {
+    try { fs.mkdirSync(d, { recursive: true }); return d; } catch (_) { /* 不可写则回退 */ }
+  }
+  return ROOT;
+}
+const DATA_DIR = dataDir();
+// 写回环境变量，确保 spawn 的 update.js / push.js 读写同一份设置
+process.env.FNDEPOT_DATA_DIR = DATA_DIR;
+const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
+
+// 旧版本把设置写在安装目录里；迁移一次，避免用户已填的 Token / 密码丢失
+(function migrateLegacySettings() {
+  if (DATA_DIR === ROOT) return;
+  const legacy = path.join(ROOT, 'settings.json');
+  if (!fs.existsSync(SETTINGS_FILE) && fs.existsSync(legacy)) {
+    try { fs.copyFileSync(legacy, SETTINGS_FILE); } catch (_) { /* 迁移失败不阻塞启动 */ }
+  }
+})();
 
 // 读取 Web 设置（首次运行不存在时返回空对象）
 function loadSettings() {

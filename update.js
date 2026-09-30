@@ -27,7 +27,10 @@ const DEFAULT_CATEGORY = ['系统工具'];
 
 // 读取配置：优先 Web 设置（settings.json），其次 .env
 function loadEnv() {
-  const settingsPath = path.join(ROOT, 'settings.json');
+  const dataDir = process.env.FNDEPOT_DATA_DIR || process.env.TRIM_PKGVAR;
+  const settingsPath = dataDir
+    ? path.join(dataDir, 'settings.json')
+    : path.join(ROOT, 'settings.json');
   if (fs.existsSync(settingsPath)) {
     try {
       const s = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
