@@ -103,6 +103,18 @@
           "size": 986556
         }
       }
+    },
+    "1.0.7": {
+      "changelog": "### 优化\n- **更新说明改为从 CHANGELOG.md 自动生成**：新增 `fnos/sync-changelog.js`，打包 fpk 时把当前版本的真实变更写入飞牛应用中心的 `changelog` 字段与升级向导；`release.js` 的 GitHub Release 正文同样取该段，发布后自动将 `[未发布]` 段转正为对应版本并新建下一版 `[未发布]` 段",
+      "updated_at": "2026-09-30T10:05:44+08:00",
+      "os_min_version": "1.1.8",
+      "packages": {
+        "all": {
+          "download_url": "https://github.com/RONGLINC93/reminder/releases/download/v1.0.7/reminder-1.0.7.fpk",
+          "sha256": "bbfac287c054c565d47234e9f4f02903fb091474013094d2637569356f93ab0e",
+          "size": 998922
+        }
+      }
     }
   }
 }
