@@ -1,0 +1,13 @@
+{
+  ".url": {
+    "fndepot-app-source.main": {
+      "title": "FnDepot应用源管理",
+      "icon": "images/icon_{0}.png",
+      "type": "iframe",
+      "protocol": "http",
+      "port": "9555",
+      "url": "/",
+      "allUsers": false
+    }
+  }
+}
