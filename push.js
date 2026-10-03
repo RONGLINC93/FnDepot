@@ -50,6 +50,23 @@ const authUrl = repoUrl.replace('https://', `https://x-access-token:${token}@`);
 // 输出时隐藏令牌
 const mask = (s) => s.split(token).join('******');
 
+// 推送/拉取只在 Git 工作副本中才有意义；已安装的 fnOS 包目录不是仓库，
+// 先检测避免抛出难懂的 git 报错。
+function isGitRepo() {
+  try {
+    execFileSync('git', ['rev-parse', '--is-inside-work-tree'], { cwd: ROOT, stdio: 'ignore' });
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+if (!isGitRepo()) {
+  console.error('[错误] 当前目录不是 Git 仓库，无法执行「推送」。');
+  console.error('「拉取 / 推送」仅适用于本地开发环境（项目根目录是 Git 工作副本）。');
+  console.error('在已安装的 fnOS 应用里，请改用「更新仓库」从 GitHub 接口刷新目录。');
+  process.exit(1);
+}
+
 function git(args) {
   try {
     return execFileSync('git', args, { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] }).toString().trim();
