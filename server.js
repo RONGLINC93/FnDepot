@@ -285,6 +285,7 @@ function serveStatic(req, res, urlPath) {
 let running = false;
 
 const STEPS = {
+  pull: [['从 GitHub 拉取', ['pull.js']]],
   update: [['更新仓库（仅最新版本）', ['update.js']]],
   deep: [['深度更新（全部版本）', ['update.js', '--deep']]],
   push: [['推送到 GitHub', ['push.js']]],
