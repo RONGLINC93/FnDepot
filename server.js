@@ -210,6 +210,49 @@ function loadApps() {
 }
 
 // ---------------------------------------------------------------------------
+// 文件管理：列举会被推送的仓库文件/目录（需登录）
+// ---------------------------------------------------------------------------
+function safeJoin(base, rel) {
+  const target = path.normalize(path.join(base, rel || ''));
+  if (target !== base && !target.startsWith(base + path.sep)) return null;
+  return target;
+}
+
+function listDir(rel) {
+  const dir = safeJoin(ROOT, rel);
+  if (!dir || !fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return null;
+  let names;
+  try {
+    names = fs.readdirSync(dir);
+  } catch (_) {
+    return null;
+  }
+  const entries = [];
+  for (const name of names) {
+    if (name === '.git' || name === 'node_modules') continue; // 非业务文件，跳过
+    const full = path.join(dir, name);
+    let st;
+    try {
+      st = fs.statSync(full);
+    } catch (_) {
+      continue;
+    }
+    const isDir = st.isDirectory();
+    entries.push({
+      name,
+      type: isDir ? 'dir' : 'file',
+      size: isDir ? 0 : st.size,
+      mtime: st.mtime.toISOString(),
+      rel: path.posix.join(rel || '', name),
+    });
+  }
+  entries.sort((a, b) =>
+    a.type === b.type ? a.name.localeCompare(b.name) : (a.type === 'dir' ? -1 : 1)
+  );
+  return { path: rel || '', entries };
+}
+
+// ---------------------------------------------------------------------------
 // 静态文件
 // ---------------------------------------------------------------------------
 function sendFile(res, file) {
@@ -368,6 +411,23 @@ const server = http.createServer((req, res) => {
     }
     res.writeHead(405, { 'Content-Type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({ error: '方法不支持' }));
+    return;
+  }
+  if (p === '/api/files') {
+    if (!authOk(req)) {
+      res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ error: '未登录' }));
+      return;
+    }
+    const rel = decodeURIComponent(u.searchParams.get('dir') || '');
+    const data = listDir(rel);
+    if (!data) {
+      res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ error: '无效目录' }));
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify(data));
     return;
   }
   if (p === '/api/run') {

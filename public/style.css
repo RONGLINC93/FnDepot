@@ -147,7 +147,7 @@ main { max-width: 1100px; margin: 0 auto; padding: 24px; }
 .status.err { color: var(--danger); }
 
 .terminal {
-  margin-top: 18px; background: #0a0c10;
+  margin-top: 0; background: #0a0c10;
   border: 1px solid var(--border); border-radius: var(--radius);
   overflow: hidden;
 }
@@ -165,6 +165,55 @@ main { max-width: 1100px; margin: 0 auto; padding: 24px; }
 #log .err { color: var(--danger); }
 
 .footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px; }
+
+/* 更新管理：左右两栏（左文件管理 / 右操作与日志） */
+.admin-split { display: flex; gap: 16px; align-items: flex-start; }
+.admin-left { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.admin-right { flex: 0 0 340px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+@media (max-width: 820px) {
+  .admin-split { flex-direction: column; }
+  .admin-left { flex-basis: auto; width: 100%; }
+}
+
+/* 文件管理（更新管理内部，左栏） */
+.file-manager { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.fm-toolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--panel-2);
+}
+.fm-path { font-family: "SFMono-Regular", Consolas, monospace; font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fm-views { display: flex; gap: 6px; flex-shrink: 0; }
+.fm-views .btn.tiny { padding: 5px 12px; font-size: 12px; }
+.fm-views .btn.tiny.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.fm-body { padding: 8px; flex: 1 1 auto; min-height: 0; overflow: auto; }
+.fm-empty { padding: 24px; text-align: center; color: var(--muted); font-size: 13px; }
+
+/* 列表模式：每行一条 */
+.fm-list .fm-item {
+  display: grid; grid-template-columns: 28px 1fr auto auto;
+  align-items: center; gap: 10px; padding: 9px 10px;
+  border-radius: 8px; cursor: default; font-size: 13.5px;
+}
+.fm-list .fm-item.fm-dir, .fm-list .fm-item.fm-up { cursor: pointer; }
+.fm-list .fm-item:hover { background: var(--panel-2); }
+.fm-list .fm-ico { text-align: center; font-size: 15px; }
+.fm-list .fm-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fm-list .fm-meta { color: var(--muted); font-size: 12.5px; }
+.fm-list .fm-time { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+/* 平铺模式：网格卡片 */
+.fm-tile { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+.fm-tile .fm-item {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 14px 8px; background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: 10px; text-align: center; cursor: default;
+}
+.fm-tile .fm-item.fm-dir { cursor: pointer; }
+.fm-tile .fm-item:hover { border-color: var(--accent); }
+.fm-tile .fm-ico { font-size: 30px; }
+.fm-tile .fm-name { font-size: 13px; word-break: break-all; max-width: 100%; }
+.fm-tile .fm-meta { font-size: 11.5px; color: var(--muted); }
 
 /* 登录框 */
 .login-box {

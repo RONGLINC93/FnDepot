@@ -28,6 +28,14 @@ function fmtSize(n) {
   if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
   return (n / 1024 / 1024).toFixed(2) + ' MB';
 }
+function fmtTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ` +
+    `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
 
 // ---------------------------------------------------------------------------
 // 加载并渲染应用目录
@@ -194,7 +202,7 @@ const loginErr = document.getElementById('loginErr');
 function showAdmin(authed) {
   loginBox.style.display = authed ? 'none' : 'block';
   adminPanel.style.display = authed ? 'block' : 'none';
-  if (authed) { statusEl.textContent = '空闲'; loadSettings(); }
+  if (authed) { statusEl.textContent = '空闲'; loadSettings(); loadFm(''); }
 }
 
 async function checkAuth() {
@@ -347,6 +355,7 @@ function runTask(action) {
     }
     closeEs();
     loadCatalog(); // 刷新目录（新版本/更新时间）
+    loadFm(fmCurrent); // 刷新文件管理列表，停留在当前打开的目录
   });
   es.onerror = () => {
     // 连接已结束（含正常完成或被拒），仅关闭，不重连
@@ -359,6 +368,84 @@ function runTask(action) {
 function closeEs() {
   if (es) { es.close(); es = null; }
   runButtons.forEach(b => (b.disabled = false));
+}
+
+// ---------------------------------------------------------------------------
+// 文件管理（更新管理内部）：列举会被推送的仓库文件/目录，支持列表/平铺
+// ---------------------------------------------------------------------------
+const fmBody = document.getElementById('fmBody');
+const fmPath = document.getElementById('fmPath');
+let fmCurrent = '';
+let fmView = 'list';
+let fmData = null;
+
+function setFmView(v) {
+  fmView = v;
+  document.getElementById('fmListBtn').classList.toggle('active', v === 'list');
+  document.getElementById('fmTileBtn').classList.toggle('active', v === 'tile');
+  fmBody.className = 'fm-body ' + (v === 'tile' ? 'fm-tile' : 'fm-list');
+  renderFm();
+}
+document.getElementById('fmListBtn').addEventListener('click', () => setFmView('list'));
+document.getElementById('fmTileBtn').addEventListener('click', () => setFmView('tile'));
+
+async function loadFm(dir) {
+  fmCurrent = dir || '';
+  try {
+    const r = await fetch('/api/files?dir=' + encodeURIComponent(fmCurrent));
+    if (!r.ok) return;
+    fmData = await r.json();
+    renderFm();
+  } catch (_) {
+    fmData = null;
+  }
+}
+
+function fmIcon(type) {
+  return type === 'dir' ? '📁' : '📄';
+}
+
+function renderFm() {
+  if (!fmData) {
+    fmBody.innerHTML = '<div class="fm-empty">无法加载文件列表</div>';
+    return;
+  }
+  fmPath.textContent = '/' + (fmData.path || '');
+  fmBody.innerHTML = '';
+
+  // 上级目录（根目录除外）
+  if (fmData.path) {
+    const up = document.createElement('div');
+    up.className = 'fm-item fm-up';
+    up.innerHTML = '<span class="fm-ico">↩</span><span class="fm-name">..</span>';
+    up.addEventListener('click', () => loadFm(fmData.path.split('/').slice(0, -1).join('/')));
+    fmBody.appendChild(up);
+  }
+
+  (fmData.entries || []).forEach(e => {
+    const item = document.createElement('div');
+    item.className = 'fm-item fm-' + e.type;
+    if (fmView === 'tile') {
+      item.innerHTML =
+        `<span class="fm-ico">${fmIcon(e.type)}</span>` +
+        `<span class="fm-name">${esc(e.name)}</span>` +
+        `<span class="fm-meta">${e.type === 'dir' ? '目录' : fmtSize(e.size)}</span>`;
+    } else {
+      item.innerHTML =
+        `<span class="fm-ico">${fmIcon(e.type)}</span>` +
+        `<span class="fm-name">${esc(e.name)}</span>` +
+        `<span class="fm-meta">${e.type === 'dir' ? '目录' : fmtSize(e.size)}</span>` +
+        `<span class="fm-time">${esc(fmtTime(e.mtime))}</span>`;
+    }
+    if (e.type === 'dir') {
+      item.addEventListener('click', () => loadFm(e.rel));
+    }
+    fmBody.appendChild(item);
+  });
+
+  if (!(fmData.entries || []).length && !fmData.path) {
+    fmBody.innerHTML = '<div class="fm-empty">目录为空</div>';
+  }
 }
 
 // ---------------------------------------------------------------------------
