@@ -145,25 +145,21 @@ function renderCard(app) {
     card.appendChild(dl);
   }
 
-  // 在 fnOS 安装：直接下载最新版 .fpk，由 fnOS 打开并完成安装
-  if (latest && lat && lat.packages && lat.packages.all && lat.packages.all.download_url) {
-    const installBtn = document.createElement('a');
-    installBtn.className = 'btn primary';
-    installBtn.style.textAlign = 'center';
-    installBtn.href = lat.packages.all.download_url;
-    installBtn.setAttribute('download', '');
-    installBtn.target = '_blank';
-    installBtn.textContent = '在 fnOS 安装' +
-      (lat.packages.all.size ? ' (' + fmtSize(lat.packages.all.size) + ')' : '');
-    card.appendChild(installBtn);
-  } else {
-    const installBtn = document.createElement('button');
-    installBtn.className = 'btn primary';
-    installBtn.style.textAlign = 'center';
-    installBtn.textContent = '在 fnOS 安装';
-    installBtn.addEventListener('click', () => openInstall(d.display_name || app.name));
-    card.appendChild(installBtn);
-  }
+  // 在 fnOS 安装：优先调用设备内 fnOS 安装接口，失败则回退为下载 FPK
+  const installBtn = document.createElement('button');
+  installBtn.className = 'btn primary';
+  installBtn.style.textAlign = 'center';
+  const dlPkg = (latest && lat && lat.packages && lat.packages.all) ? lat.packages.all : null;
+  installBtn.textContent = '在 fnOS 安装' + (dlPkg && dlPkg.size ? ' (' + fmtSize(dlPkg.size) + ')' : '');
+  installBtn.addEventListener('click', () => installApp({
+    appId: app.name,
+    version: latest || '',
+    source: SRC_HOME,
+    display: d.display_name || app.name,
+    downloadUrl: dlPkg ? dlPkg.download_url : '',
+    btn: installBtn,
+  }));
+  card.appendChild(installBtn);
 
   // 版本折叠
   if (versions.length > 1) {
@@ -302,6 +298,56 @@ installModal.addEventListener('click', e => {
   if (e.target === installModal) closeInstall();
 });
 
+// 在设备内直接触发 fnOS 安装：先请求后端 /api/install 转发到 fnOS 本地接口，
+// 未配置或失败则回退为下载 FPK（由 fnOS 打开安装）。
+async function installApp(opt) {
+  const btn = opt.btn;
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '正在发送安装请求…';
+  const reset = () => {
+    btn.textContent = orig;
+    btn.disabled = false;
+  };
+  try {
+    const r = await fetch('/api/install', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ appId: opt.appId, version: opt.version, source: opt.source }),
+    });
+    if (r.ok) {
+      btn.textContent = '✓ 已发送安装请求';
+      setTimeout(reset, 2500);
+      return;
+    }
+    const d = await r.json().catch(() => ({}));
+    fallback(d.error || '安装请求未成功');
+  } catch (_) {
+    fallback('无法连接安装服务');
+  }
+  function fallback(msg) {
+    if (opt.downloadUrl) {
+      triggerDownload(opt.downloadUrl);
+      btn.textContent = '已回退为下载安装包';
+    } else {
+      openInstall(opt.display);
+      btn.textContent = orig;
+    }
+    setTimeout(reset, 2500);
+  }
+}
+
+function triggerDownload(url) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.setAttribute('download', '');
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+
 // ---------------------------------------------------------------------------
 // 设置：GITHUB_TOKEN / GITHUB_REPO_URL / 登陆密码（模态框）
 // ---------------------------------------------------------------------------
@@ -342,9 +388,13 @@ async function loadSettings() {
     setBadge('badgeToken', d.has_github_token, '已保存', '未保存');
     setBadge('badgeRepo', !!d.github_repo_url, '已保存', '未保存');
     setBadge('badgePassword', d.has_admin_password, '已自定义', '默认 admin');
+    document.getElementById('setFnosUrl').value = d.fnos_api_url || '';
+    setBadge('badgeFnosUrl', !!d.fnos_api_url, '已配置', '未配置');
+    setBadge('badgeFnosToken', d.has_fnos_api_token, '已保存', '未保存');
     const hint = [];
     hint.push(d.has_github_token ? 'GITHUB_TOKEN 已设置' : 'GITHUB_TOKEN 未设置');
     hint.push(d.has_admin_password ? '已设置自定义登陆密码' : '登陆密码为默认 admin');
+    hint.push(d.fnos_api_url ? 'fnOS 直接安装已启用' : '未配置 fnOS API，安装将回退为下载 FPK');
     document.getElementById('settingHint').textContent = hint.join('；');
   } catch (_) {}
 }
@@ -360,6 +410,8 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
       github_token: document.getElementById('setToken').value,
       github_repo_url: document.getElementById('setRepo').value,
       admin_password: document.getElementById('setPassword').value,
+      fnos_api_url: document.getElementById('setFnosUrl').value,
+      fnos_api_token: document.getElementById('setFnosToken').value,
     }),
   });
   const d = await r.json().catch(() => ({}));

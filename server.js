@@ -21,6 +21,16 @@ const PUBLIC = path.join(ROOT, 'public');
 const PORT = process.env.PORT || 9555;
 
 // ---------------------------------------------------------------------------
+// fnOS 本地应用中心「安装」接口（在设备内由 WebUI 直接触发安装）
+//   - base 地址（含端口）来自 Web 设置 fnos_api_url，默认指向本机管理口 5666；
+//     若 FnDepot 以 Docker 形式运行，需填宿主机可达地址（如 http://<NAS-IP>:5666
+//     或 http://host.docker.internal:5666），不能用 127.0.0.1（那是容器自身）。
+//   - 下面的路径与鉴权方式需以 FNOSP/fnnas-api 文档（应用中心模块）或浏览器
+//     在「应用中心 → 安装」时抓到的真实请求为准，必要时再微调。
+// ---------------------------------------------------------------------------
+const FNOS_INSTALL_PATH = '/api/app-center/install'; // TODO: 按实际文档/抓包确认
+
+// ---------------------------------------------------------------------------
 // 登录鉴权（仅保护「更新管理」相关接口，应用目录保持公开）
 //   - 密码优先取 Web 设置（settings.json）或环境变量 ADMIN_PASSWORD；
 //     均未设置时回退为 "admin"。
@@ -280,6 +290,46 @@ function serveStatic(req, res, urlPath) {
 }
 
 // ---------------------------------------------------------------------------
+// 代理到 fnOS 本地应用中心的「安装」接口（在设备内由 WebUI 直接触发）
+//   - payload：{ source, appId, version }（source 为本源 homepage，appId 为应用名）
+//   - 鉴权：若设置了 fnos_api_token，则以 Bearer 头携带；否则不附加（依赖同一
+//     局域网/设备的会话 Cookie，需按实际环境调整）。
+// ---------------------------------------------------------------------------
+function proxyFnOsInstall(base, token, payload, res) {
+  let u;
+  try {
+    u = new URL(base);
+  } catch (_) {
+    res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify({ ok: false, error: 'fnOS API 地址格式错误（应为 http://host:port）' }));
+    return;
+  }
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const opts = {
+    hostname: u.hostname,
+    port: u.port || 80,
+    path: FNOS_INSTALL_PATH,
+    method: 'POST',
+    headers,
+  };
+  const r = http.request(opts, resp => {
+    let data = '';
+    resp.on('data', c => (data += c));
+    resp.on('end', () => {
+      res.writeHead(resp.statusCode, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(data);
+    });
+  });
+  r.on('error', e => {
+    res.writeHead(502, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify({ ok: false, error: '无法连接 fnOS：' + e.message }));
+  });
+  r.write(JSON.stringify(payload));
+  r.end();
+}
+
+// ---------------------------------------------------------------------------
 // 执行脚本并实时回传日志（Server-Sent Events）
 // ---------------------------------------------------------------------------
 let running = false;
@@ -385,6 +435,8 @@ const server = http.createServer((req, res) => {
         github_repo_url: settings.github_repo_url || '',
         has_github_token: !!settings.github_token,
         has_admin_password: !!settings.admin_password,
+        fnos_api_url: settings.fnos_api_url || '',
+        has_fnos_api_token: !!settings.fnos_api_token,
       }));
       return;
     }
@@ -394,6 +446,8 @@ const server = http.createServer((req, res) => {
         if (typeof body.github_repo_url === 'string') next.github_repo_url = body.github_repo_url.trim();
         if (typeof body.github_token === 'string' && body.github_token.length > 0) next.github_token = body.github_token;
         if (typeof body.admin_password === 'string' && body.admin_password.length > 0) next.admin_password = body.admin_password;
+        if (typeof body.fnos_api_url === 'string') next.fnos_api_url = body.fnos_api_url.trim();
+        if (typeof body.fnos_api_token === 'string' && body.fnos_api_token.length > 0) next.fnos_api_token = body.fnos_api_token;
         try {
           fs.writeFileSync(SETTINGS_FILE, JSON.stringify(next, null, 2), 'utf-8');
         } catch (e) {
@@ -404,6 +458,8 @@ const server = http.createServer((req, res) => {
         settings.github_repo_url = next.github_repo_url;
         settings.github_token = next.github_token;
         settings.admin_password = next.admin_password;
+        settings.fnos_api_url = next.fnos_api_url;
+        settings.fnos_api_token = next.fnos_api_token;
         applySettings(settings);
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({ ok: true }));
@@ -443,6 +499,30 @@ const server = http.createServer((req, res) => {
       return;
     }
     runAction(u.searchParams.get('action') || '', res);
+    return;
+  }
+  if (p === '/api/install') {
+    if (req.method !== 'POST') {
+      res.writeHead(405);
+      res.end();
+      return;
+    }
+    // 说明：安装是特权操作，但本接口仅向用户「自己的 fnOS」转发，且 fnOS 凭据
+    // 保存在服务端，不对外暴露。若你的 WebUI 暴露公网，建议改为 require authOk(req)。
+    readJsonBody(req).then(body => {
+      const base = settings.fnos_api_url;
+      if (!base) {
+        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ ok: false, error: '未配置 fnOS API 地址，请在「更新管理 → 设置」中填写' }));
+        return;
+      }
+      const payload = {
+        source: body.source || '',
+        appId: body.appId || '',
+        version: body.version || '',
+      };
+      proxyFnOsInstall(base, settings.fnos_api_token, payload, res);
+    });
     return;
   }
   if (p.startsWith('/api/')) {
