@@ -1,0 +1,27 @@
+[
+  {
+    "stepTitle": "卸载 FnDepot",
+    "items": [
+      {
+        "type": "tips",
+        "helpText": "卸载后将停止服务并移除应用。请选择是否保留应用数据（设置、Token 等）。"
+      },
+      {
+        "type": "radio",
+        "field": "data_action",
+        "label": "应用数据",
+        "options": [
+          {
+            "label": "保留数据（重装后无需重新填写 Token）",
+            "value": "keep"
+          },
+          {
+            "label": "删除所有数据",
+            "value": "delete"
+          }
+        ],
+        "initValue": "keep"
+      }
+    ]
+  }
+]

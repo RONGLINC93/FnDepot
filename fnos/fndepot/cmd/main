@@ -12,16 +12,24 @@ export PATH=/var/apps/nodejs_v20/target/bin:$PATH
 
 APP_DIR="${TRIM_APPDEST}/server"
 
-# 优先使用 config/resource 中声明的共享目录，否则回退到应用运行时数据目录
-DATA_DIR="${TRIM_DATA_SHARE_PATHS%%:*}"
-if [ -z "${DATA_DIR}" ]; then
-    DATA_DIR="${TRIM_PKGVAR}/data"
+# 用户数据放在 fnOS 包变量目录 TRIM_PKGVAR/data（位于安装目录之外，卸载时默认保留）。
+# 是否「保留 / 删除」由卸载向导（wizard/uninstall）采集，uninstall_callback 按选择处理。
+DATA_DIR="${TRIM_PKGVAR}/data"
+mkdir -p "${DATA_DIR}" >/dev/null 2>&1
+
+# 兼容迁移：设置曾短暂写在 APP_DIR/data，或旧版写在 TRIM_PKGVAR/data/data。
+if [ ! -f "${DATA_DIR}/settings.json" ]; then
+    for old in "${APP_DIR}/data/settings.json" "${TRIM_PKGVAR}/data/data/settings.json" "${TRIM_PKGVAR}/data/settings.json"; do
+        if [ -f "$old" ]; then
+            cp "$old" "${DATA_DIR}/settings.json" 2>/dev/null || true
+            break
+        fi
+    done
 fi
 
 PORT="${TRIM_SERVICE_PORT:-9555}"
 
 mkdir -p "${TRIM_PKGVAR}" >/dev/null 2>&1
-mkdir -p "${DATA_DIR}/data" >/dev/null 2>&1
 
 log_msg() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "${LOG_FILE}"
@@ -64,7 +72,7 @@ start_process() {
 
     cd "${APP_DIR}" || fail "应用目录不存在：${APP_DIR}"
 
-    FNDEPOT_DATA_DIR="${DATA_DIR}/data" PORT="${PORT}" \
+    FNDEPOT_DATA_DIR="${DATA_DIR}" PORT="${PORT}" \
         node server.js >> "${LOG_FILE}" 2>&1 &
 
     printf "%s" "$!" > "${PID_FILE}"
