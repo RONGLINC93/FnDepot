@@ -17,6 +17,7 @@ tabs.forEach(tab => {
 // ---------------------------------------------------------------------------
 // 工具
 // ---------------------------------------------------------------------------
+let SRC_HOME = ''; // 源主页地址（来自 source_info.homepage）
 function esc(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -45,6 +46,7 @@ async function loadCatalog() {
   const data = await res.json();
 
   const src = data.source || {};
+  SRC_HOME = src.homepage || '';
   document.getElementById('sourceName').textContent = src.name || 'FnDepot';
   document.getElementById('sourceDesc').textContent = src.description || '飞牛 fnOS 第三方应用源';
   document.title = (src.name || 'FnDepot') + ' · 应用源管理';
@@ -143,6 +145,26 @@ function renderCard(app) {
     card.appendChild(dl);
   }
 
+  // 在 fnOS 安装：直接下载最新版 .fpk，由 fnOS 打开并完成安装
+  if (latest && lat && lat.packages && lat.packages.all && lat.packages.all.download_url) {
+    const installBtn = document.createElement('a');
+    installBtn.className = 'btn primary';
+    installBtn.style.textAlign = 'center';
+    installBtn.href = lat.packages.all.download_url;
+    installBtn.setAttribute('download', '');
+    installBtn.target = '_blank';
+    installBtn.textContent = '在 fnOS 安装' +
+      (lat.packages.all.size ? ' (' + fmtSize(lat.packages.all.size) + ')' : '');
+    card.appendChild(installBtn);
+  } else {
+    const installBtn = document.createElement('button');
+    installBtn.className = 'btn primary';
+    installBtn.style.textAlign = 'center';
+    installBtn.textContent = '在 fnOS 安装';
+    installBtn.addEventListener('click', () => openInstall(d.display_name || app.name));
+    card.appendChild(installBtn);
+  }
+
   // 版本折叠
   if (versions.length > 1) {
     const toggle = document.createElement('button');
@@ -236,6 +258,48 @@ pwdEl.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 document.getElementById('logoutBtn').addEventListener('click', async () => {
   await fetch('/api/logout', { method: 'POST' });
   showAdmin(false);
+});
+
+// ---------------------------------------------------------------------------
+// 安装指南（fnOS）：全局按钮 + 卡片内「在 fnOS 安装」
+// ---------------------------------------------------------------------------
+const installModal = document.getElementById('installModal');
+
+function renderInstallGuide(appName) {
+  const home = SRC_HOME || '（请使用本仓库地址）';
+  const appLine = appName
+    ? `<li>在来源分类中找到并点击「<b>${esc(appName)}</b>」，然后点击「安装」。</li>`
+    : '';
+  document.getElementById('installBody').innerHTML =
+    `<ol class="install-steps">` +
+    `<li>打开 <b>fnOS</b>，进入「应用中心」。</li>` +
+    `<li>点击应用中心右上角「⚙ 设置」→「来源管理」→「添加来源」。</li>` +
+    `<li>在地址栏粘贴本源地址并确认：<br><code class="install-code">${esc(home)}</code></li>` +
+    `<li>回到应用中心，在顶部切换到「<b>本源</b>」分类（即刚添加的来源）。</li>` +
+    appLine +
+    `</ol>` +
+    `<p class="install-note">提示：若应用标注了架构（x86 / arm），请确认与你的 fnOS 设备匹配。</p>`;
+  const link = document.getElementById('installSourceLink');
+  if (/^https?:\/\//.test(home)) {
+    link.href = home;
+    link.style.display = '';
+  } else {
+    link.style.display = 'none';
+  }
+}
+
+function openInstall(appName) {
+  renderInstallGuide(appName);
+  installModal.hidden = false;
+}
+function closeInstall() {
+  installModal.hidden = true;
+}
+document.getElementById('installGuideBtn').addEventListener('click', () => openInstall());
+document.getElementById('installCloseBtn').addEventListener('click', closeInstall);
+document.getElementById('installOkBtn').addEventListener('click', closeInstall);
+installModal.addEventListener('click', e => {
+  if (e.target === installModal) closeInstall();
 });
 
 // ---------------------------------------------------------------------------

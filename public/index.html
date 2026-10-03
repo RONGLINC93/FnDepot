@@ -19,6 +19,7 @@
     <nav class="tabs">
       <button class="tab active" data-tab="catalog">应用目录</button>
       <button class="tab" data-tab="admin">更新管理</button>
+      <button class="help-btn" id="installGuideBtn" type="button">安装指南</button>
     </nav>
   </header>
 
@@ -84,6 +85,21 @@
       </div>
     </section>
   </main>
+
+  <!-- 安装指南模态框 -->
+  <div class="modal-overlay" id="installModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="installModalTitle">
+      <div class="modal-head">
+        <h3 id="installModalTitle">在 fnOS 中安装应用</h3>
+        <button class="modal-close" id="installCloseBtn" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body" id="installBody"></div>
+      <div class="modal-foot">
+        <a class="btn" id="installSourceLink" target="_blank" rel="noopener">打开源地址</a>
+        <button class="btn primary" id="installOkBtn">知道了</button>
+      </div>
+    </div>
+  </div>
 
   <!-- 设置模态框 -->
   <div class="modal-overlay" id="settingsModal" hidden>
