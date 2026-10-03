@@ -7,6 +7,7 @@ rem  启动 FnDepot 网站服务（应用目录 + 更新管理），默认端口
 rem  可用环境变量指定端口，例如： set PORT=8080  再运行本脚本。
 rem  启动后浏览器打开 http://localhost:9555
 rem ---------------------------------------------------------------------------
+start "" cmd /c "ping -n 4 127.0.0.1 >nul & start http://localhost:9555"
 node "%~dp0server.js" %*
 
 if errorlevel 1 (
