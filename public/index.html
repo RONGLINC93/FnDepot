@@ -58,20 +58,24 @@
 
           <div class="admin-right">
             <div class="admin-actions">
-              <button class="btn primary" data-action="oneclick">一键更新（更新 + 推送）</button>
-              <button class="btn" data-action="pull">从 GitHub 拉取</button>
-              <button class="btn" data-action="update">更新仓库（最新版）</button>
-              <button class="btn" data-action="deep">深度更新（全部版本）</button>
-              <button class="btn" data-action="push">推送到 GitHub</button>
-              <button class="btn" id="settingsBtn">设置</button>
-              <button class="btn tiny" id="logoutBtn">退出登录</button>
+              <div class="action-grid">
+                <button class="btn primary" data-action="oneclick">一键更新（更新 + 推送）</button>
+                <button class="btn" data-action="pull">从 GitHub 拉取</button>
+                <button class="btn" data-action="update">更新仓库（最新版）</button>
+                <button class="btn" data-action="deep">深度更新（全部版本）</button>
+                <button class="btn" data-action="push">推送到 GitHub</button>
+              </div>
               <span class="status" id="runStatus">空闲</span>
             </div>
 
             <div class="terminal">
               <div class="terminal-bar">
                 <span>运行日志</span>
-                <button class="btn tiny" id="clearLog">清空</button>
+                <div class="terminal-tools">
+                  <button class="btn tiny" id="settingsBtn">设置</button>
+                  <button class="btn tiny" id="logoutBtn">退出登录</button>
+                  <button class="btn tiny" id="clearLog">清空</button>
+                </div>
               </div>
               <pre id="log"></pre>
             </div>
