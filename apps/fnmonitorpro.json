@@ -1,0 +1,36 @@
+{
+  "app_name": "fnmonitorpro",
+  "display_name": "飞牛监控pro",
+  "desc": "<b>fnOS 系统监控面板</b>：实时监控 CPU、内存、磁盘、网络、温度、功耗与 GPU，Docker 容器资源占用，端口占用与内置应用统计，支持历史趋势记录与数据持久化。<br><br>🏠 总览仪表盘（系统资源 + 硬盘 + 趋势合并一页）| 🐳 Docker · 端口 | ⚙️ 设置",
+  "platform": [
+    "arm"
+  ],
+  "categories": [
+    "系统工具"
+  ],
+  "icon_url": "https://github.com/RONGLINC93.png?size=256",
+  "readme_url": "https://raw.githubusercontent.com/RONGLINC93/fnmonitor/main/README.md",
+  "bug_report_url": "https://github.com/RONGLINC93/fnmonitor/issues",
+  "maintainer": "RONGLINC93",
+  "maintainer_url": "https://github.com/RONGLINC93/fnmonitor",
+  "distributor": "RONGLINC93",
+  "distributor_url": "https://github.com/RONGLINC93/fnmonitor",
+  "run_as": "package",
+  "install_type": "",
+  "is_docker": false,
+  "service_port": "8778",
+  "releases": {
+    "2.17.0": {
+      "changelog": "v2.17.0 更名飞牛监控pro / 端口 8778 / 风扇温度曲线控制 / 五档卡片尺寸 / PRO 图标",
+      "updated_at": "2026-10-07T21:43:46+08:00",
+      "os_min_version": "0.9.0",
+      "packages": {
+        "all": {
+          "download_url": "https://github.com/RONGLINC93/fnmonitor/releases/download/v2.17.0/fnmonitorpro-2.17.0-arm.fpk",
+          "sha256": "83f85fcd2c49148cfa841b8e52740a31b9b4f5de63a66f6e094ae6b84c0a33f0",
+          "size": 441348
+        }
+      }
+    }
+  }
+}
