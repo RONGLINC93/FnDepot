@@ -21,14 +21,14 @@
   "service_port": "8778",
   "releases": {
     "2.17.0": {
-      "changelog": "v2.17.0 更名飞牛监控pro / 端口 8778 / 风扇温度曲线控制 / 五档卡片尺寸 / PRO 图标",
-      "updated_at": "2026-10-07T21:43:46+08:00",
+      "changelog": "详见 manifest changelog",
+      "updated_at": "2026-10-07T22:00:00+08:00",
       "os_min_version": "0.9.0",
       "packages": {
         "all": {
-          "download_url": "https://github.com/RONGLINC93/fnmonitor/releases/download/v2.17.0/fnmonitorpro-2.17.0-arm.fpk",
-          "sha256": "83f85fcd2c49148cfa841b8e52740a31b9b4f5de63a66f6e094ae6b84c0a33f0",
-          "size": 441348
+          "download_url": "https://github.com/RONGLINC93/fnmonitorpro/releases/download/v2.17.0/fnmonitorpro-2.17.0-arm.fpk",
+          "sha256": "624ee2e582659cfe4a54e9ba14b65b7e192edb8e63b741a487e6c8b6c8c8f9bf",
+          "size": 441597
         }
       }
     }
