@@ -117,6 +117,32 @@ async function head(url) {
   }
 }
 
+// 从安装包文件名推断架构：x86（含 amd64/x86_64）、arm（含 arm64/aarch64），否则返回 null
+function archOf(name) {
+  const tail = String(name).toLowerCase().replace(/\.fpk$/i, '').split('-').pop();
+  if (/^(x86(_64)?|amd64)$/.test(tail)) return 'x86';
+  if (/^(arm(64|hf)?|aarch64)$/.test(tail)) return 'arm';
+  return null;
+}
+
+// 依次尝试仓库内常见图标文件名，全部取不到再用 GitHub 头像兜底
+async function findIcon(repo, appname) {
+  const base = `https://raw.githubusercontent.com/${repo.full_name}/${repo.default_branch}`;
+  const candidates = [
+    `fnos/${appname}/ICON_256.PNG`,
+    `fnos/${appname}/ICON.PNG`,
+    `fnos/${appname}/icon.png`,
+    `fnos/${appname}/icon_256.png`,
+    `ICON_256.PNG`,
+    `ICON.PNG`,
+    `icon.png`,
+  ];
+  for (const c of candidates) {
+    if (await head(`${base}/${c}`) === 200) return `${base}/${c}`;
+  }
+  return `https://github.com/${OWNER}.png?size=256`;
+}
+
 // ---------------------------------------------------------------------------
 // FPK：tar.gz 内读取 manifest（key = value 格式）
 // ---------------------------------------------------------------------------
@@ -219,27 +245,47 @@ function dumpJson(file, data) {
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     const targets = DEEP ? fpkReleases : fpkReleases.slice(0, 1);
     for (const rel of targets) {
-      const asset = (rel.assets || []).find(a => /\.fpk$/i.test(a.name));
-      if (!asset) continue;
+      const fpkAssets = (rel.assets || []).filter(a => /\.fpk$/i.test(a.name));
+      if (!fpkAssets.length) continue;
 
-      let digest = (asset.digest || '').replace(/^sha256:/i, '');
-
-      let appname = null;
+      // 一个 Release 可能同时提供多个架构的安装包（如 fnmonitorpro 的 x86 与 arm）。
+      // 需逐个下载、按文件名识别架构，分别写入 packages.x86 / packages.arm，
+      // 而不是笼统地塞进 packages.all，否则会漏掉另一个架构的包。
       let manifest = {};
-      try {
-        const buf = (await request(asset.browser_download_url)).body;
-        const text = readFromTarGz(buf, ['manifest', 'manifest.json']);
-        manifest = parseManifest(text);
-        if (manifest.appname) {
-          appname = manifest.appname;
-        } else {
-          // manifest 缺失时按文件名兜底
-          appname = asset.name.replace(/-\d[\w.\-+]*\.fpk$/i, '');
+      let appname = null;
+      const packages = {};
+      let manifestParsed = false;
+
+      for (const asset of fpkAssets) {
+        const arch = archOf(asset.name) || 'all';
+        if (packages[arch]) continue; // 同架构只取第一个匹配的包
+
+        let digest = (asset.digest || '').replace(/^sha256:/i, '');
+        let buf;
+        try {
+          buf = (await request(asset.browser_download_url)).body;
+        } catch (e) {
+          console.log(`  [跳过] ${repo.name} ${rel.tag_name} 的 ${asset.name}：下载失败（${e.message}）`);
+          continue;
+        }
+        // manifest 只需解析一次（同一 Release 各架构的 manifest 应一致）
+        if (!manifestParsed) {
+          const text = readFromTarGz(buf, ['manifest', 'manifest.json']);
+          manifest = parseManifest(text);
+          appname = manifest.appname || asset.name.replace(/-\d[\w.\-+]*\.fpk$/i, '');
+          manifestParsed = true;
         }
         // 优先用实际下载内容的哈希，其次用 Release 提供的 digest
         if (!digest) digest = sha256(buf);
-      } catch (e) {
-        console.log(`  [跳过] ${repo.name} ${rel.tag_name}：下载或解析 FPK 失败（${e.message}）`);
+        packages[arch] = {
+          download_url: asset.browser_download_url,
+          sha256: digest,
+          size: asset.size,
+        };
+      }
+
+      if (!appname) {
+        console.log(`  [跳过] ${repo.name} ${rel.tag_name}：未能解析任何 FPK 安装包`);
         continue;
       }
 
@@ -253,17 +299,17 @@ function dumpJson(file, data) {
       if (fs.existsSync(detailPath)) {
         detail = JSON.parse(fs.readFileSync(detailPath, 'utf-8'));
       } else {
-        // 新应用：图标优先取仓库内的 ICON_256.PNG，取不到用 GitHub 头像兜底
-        let icon = `https://raw.githubusercontent.com/${repo.full_name}/${repo.default_branch}/fnos/${appname}/ICON_256.PNG`;
-        if (await head(icon) !== 200) {
-          icon = `https://github.com/${OWNER}.png?size=256`;
-        }
+        // 新应用：图标优先尝试仓库内常见图标文件名，全部取不到再用 GitHub 头像兜底
+        const icon = await findIcon(repo, appname);
+        // platform 由各架构推导，避免写成笼统的 'all'
+        const arches = Object.keys(packages).filter(k => k !== 'all');
+        const platform = arches.length ? arches : [manifest.platform || 'all'];
         const categories = CATEGORY_HINT[appname] || DEFAULT_CATEGORY;
         detail = {
           app_name: appname,
           display_name: manifest.display_name || appname,
           desc: manifest.desc || `${repo.name} 应用。`,
-          platform: [manifest.platform || 'all'],
+          platform,
           categories,
           icon_url: icon,
           readme_url: `https://raw.githubusercontent.com/${repo.full_name}/${repo.default_branch}/README.md`,
@@ -285,9 +331,14 @@ function dumpJson(file, data) {
 
       const appReleases = detail.releases || (detail.releases = {});
       const prev = appReleases[version];
-      const prevPkg = prev && prev.packages && prev.packages.all;
       let changed = false;
-      if (prevPkg && prevPkg.sha256 && prevPkg.sha256 === digest) {
+      // 与已记录版本比较：所有架构的哈希都一致才算无变化，否则视为更新
+      const sameAsPrev =
+        !!prev && !!prev.packages &&
+        Object.keys(packages).every(arch =>
+          prev.packages[arch] && prev.packages[arch].sha256 === packages[arch].sha256
+        );
+      if (prev && sameAsPrev) {
         // 版本与安装包无变化：仅当远端「更新说明」与本地不一致时刷新 changelog
         if (sourceChangelog && prev.changelog !== sourceChangelog) {
           prev.changelog = sourceChangelog;
@@ -302,13 +353,7 @@ function dumpJson(file, data) {
           changelog: sourceChangelog || `更新到 ${version}。`,
           updated_at: localStamp(),
           os_min_version: manifest.os_min_version || '',
-          packages: {
-            all: {
-              download_url: asset.browser_download_url,
-              sha256: digest,
-              size: asset.size,
-            },
-          },
+          packages,
         };
         (prev ? updated : added).push(`${appname} ${version}`);
         changed = true;

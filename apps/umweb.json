@@ -1,7 +1,7 @@
 {
   "app_name": "umweb",
   "display_name": "音乐解锁",
-  "desc": "音乐解锁 Web 版，在浏览器中解锁已购的加密音乐（ncm / qmc / mgg / mflac 等），纯前端运行，无需服务器。",
+  "desc": "音乐解锁 Web 版（legacy v1.10.8）—— 在浏览器中解锁已购的加密音乐（ncm / qmc / mgg / mflac 等），纯前端运行，无需服务器。",
   "platform": [
     "all"
   ],
@@ -22,7 +22,7 @@
   "releases": {
     "1.10.8": {
       "changelog": "## 音乐解锁 1.10.8\n\n基于 Unlock Music 上游项目的二次开发版本（界面为格式工厂风格）。\n上游作者：MengYX（MIT 许可协议）；修改维护：RONGLINC93。\n\n### 下载说明\n- `音乐解锁-1.10.8-win.zip`：Windows 本地版，解压后双击 `运行.bat` 即可使用（需 Node.js）。\n- `*.fpk`：fnOS 应用包，在飞牛应用中心上传安装。\n\n### 支持格式\n网易云(ncm) · QQ音乐(qmc / mflac / mgg) · 酷狗(kgm) · 虾米(xm) · 酷我(kwm)\n\n> 所有解密运算都在本机浏览器内完成，文件不会上传。",
-      "updated_at": "2026-09-29T17:05:44+08:00",
+      "updated_at": "2026-10-08T18:43:45+08:00",
       "os_min_version": "1.1.8",
       "packages": {
         "all": {
