@@ -31,6 +31,18 @@
           "size": 441597
         }
       }
+    },
+    "2.17.1": {
+      "changelog": "详见 manifest changelog",
+      "updated_at": "2026-10-08T14:39:45+08:00",
+      "os_min_version": "0.9.0",
+      "packages": {
+        "all": {
+          "download_url": "https://github.com/RONGLINC93/fnmonitorpro/releases/download/v2.17.1/fnmonitorpro-2.17.1-arm.fpk",
+          "sha256": "e212083fe767027e1a703e51e2fcaca64a156d72e45d01f9e47f91df31c43dcb",
+          "size": 469238
+        }
+      }
     }
   }
 }
