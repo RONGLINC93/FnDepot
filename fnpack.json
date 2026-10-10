@@ -28,6 +28,10 @@
     "fnmonitorpro": {
       "details_url": "apps/fnmonitorpro.json",
       "details_updated_at": "2026-10-09T12:41:28+08:00"
+    },
+    "ronglinc93widget": {
+      "details_url": "apps/ronglinc93widget.json",
+      "details_updated_at": "2026-10-10T17:12:41+08:00"
     }
   }
 }
