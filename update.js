@@ -108,15 +108,6 @@ async function api(pathname) {
   return JSON.parse(res.body.toString('utf-8'));
 }
 
-async function head(url) {
-  try {
-    const res = await request(url, { method: 'HEAD' });
-    return res.status;
-  } catch (e) {
-    return 0;
-  }
-}
-
 // 从安装包文件名推断架构：x86（含 amd64/x86_64）、arm（含 arm64/aarch64），否则返回 null
 function archOf(name) {
   const tail = String(name).toLowerCase().replace(/\.fpk$/i, '').split('-').pop();
@@ -125,22 +116,62 @@ function archOf(name) {
   return null;
 }
 
-// 依次尝试仓库内常见图标文件名，全部取不到再用 GitHub 头像兜底
+// 智能查找应用图标：直接拉取仓库文件树，自动匹配所有「像图标」的文件，
+// 不再硬编码 fnos/、fpk/ 等目录前缀去猜测（每个仓库结构都不同）。
+// 命中后用标准 raw 地址返回，全部取不到才回退 GitHub 头像。
 async function findIcon(repo, appname) {
-  const base = `https://raw.githubusercontent.com/${repo.full_name}/${repo.default_branch}`;
-  const candidates = [
-    `fnos/${appname}/ICON_256.PNG`,
-    `fnos/${appname}/ICON.PNG`,
-    `fnos/${appname}/icon.png`,
-    `fnos/${appname}/icon_256.png`,
-    `ICON_256.PNG`,
-    `ICON.PNG`,
-    `icon.png`,
-  ];
-  for (const c of candidates) {
-    if (await head(`${base}/${c}`) === 200) return `${base}/${c}`;
+  const branch = repo.default_branch;
+  const entries = await listIconCandidates(repo, branch);
+  if (!entries.length) return `https://github.com/${OWNER}.png?size=256`;
+
+  entries.sort((a, b) => iconScore(b) - iconScore(a));
+  const p = entries[0];
+  return `https://raw.githubusercontent.com/${repo.full_name}/${branch}/${p}`;
+}
+
+// 取仓库里所有可能是图标的文件（blob）。优先用递归文件树一次性拿到全部路径；
+// 仓库过大被 API 截断、或树接口不可用时，退回到根目录列举兜底。
+async function listIconCandidates(repo, branch) {
+  const iconRe = /(^|[\/\\])(icon|logo)([-_].*)?\.(png|jpe?g|svg|webp)$/i;
+  const collect = tree =>
+    (tree.tree || []).filter(e => e.type === 'blob' && iconRe.test(e.path)).map(e => e.path);
+
+  try {
+    const tree = await api(`/repos/${repo.full_name}/git/trees/${branch}?recursive=1`);
+    let paths = collect(tree);
+    if (tree.truncated) {
+      // 被截断时补充列举常见打包目录，尽量不漏掉图标
+      for (const d of ['', 'fpk', 'fnos', `fnos/${appname}`]) {
+        paths = paths.concat((await listDir(repo, branch, d)).filter(p => iconRe.test(p)));
+      }
+    }
+    if (paths.length) return paths;
+  } catch (_) { /* 树接口不可用，继续走根目录兜底 */ }
+
+  return listDir(repo, branch, '').filter(p => iconRe.test(p));
+}
+
+// 列举仓库某个目录下的文件（contents 接口），返回文件路径数组
+async function listDir(repo, branch, dir) {
+  const url = `/repos/${repo.full_name}/contents/${encodeURI(dir)}?ref=${branch}`;
+  try {
+    const items = await api(url);
+    return (items || []).filter(f => f.type === 'file').map(f => f.path);
+  } catch (_) {
+    return [];
   }
-  return `https://github.com/${OWNER}.png?size=256`;
+}
+
+// 给候选图标打分：优先高分辨率、优先靠近仓库根的 icon/logo、优先 png
+function iconScore(p) {
+  const base = path.basename(p).toLowerCase();
+  let s = 0;
+  const m = base.match(/(\d+)/);
+  if (m) s += parseInt(m[1], 10);                  // 尺寸越大越好（256 > 64）
+  if (/^(icon|logo)\.(png|jpe?g|svg|webp)$/i.test(base)) s += 50; // 纯 icon/logo 命名
+  if (/\.png$/i.test(base)) s += 20;               // png 优先于 svg/jpg
+  s += Math.max(0, 60 - p.split('/').length * 10); // 路径越短（越靠近根）越好
+  return s;
 }
 
 // ---------------------------------------------------------------------------
