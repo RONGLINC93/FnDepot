@@ -38,6 +38,21 @@ function fmtTime(iso) {
     `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
 
+// 一个 Release 可能同时提供 all / x86 / arm 架构的安装包，按固定顺序整理成可下载列表，
+// 保证「通用包 all」优先，再依次 x86、arm（避免漏掉多架构应用的任一架构）。
+function pkgList(packages) {
+  if (!packages) return [];
+  const order = { all: 0, x86: 1, arm: 2 };
+  return Object.keys(packages)
+    .filter(k => packages[k] && packages[k].download_url)
+    .sort((a, b) => (order[a] == null ? 99 : order[a]) - (order[b] == null ? 99 : order[b]))
+    .map(arch => ({ arch, url: packages[arch].download_url, size: packages[arch].size }));
+}
+// 架构标签：通用包不标注，特定架构标注 ·x86 / ·arm
+function archTag(arch) {
+  return arch && arch !== 'all' ? ' ·' + arch : '';
+}
+
 // ---------------------------------------------------------------------------
 // 加载并渲染应用目录
 // ---------------------------------------------------------------------------
@@ -134,29 +149,31 @@ function renderCard(app) {
     `<span>${versions.length} 个版本</span>`;
   card.appendChild(meta);
 
-  // 下载按钮（最新版）
-  if (latest && lat && lat.packages && lat.packages.all) {
+  // 下载按钮（最新版）：区分 all / x86 / arm 架构，分别提供
+  const pkgs = pkgList(lat && lat.packages);
+  pkgs.forEach(p => {
     const dl = document.createElement('a');
     dl.className = 'btn';
     dl.style.textAlign = 'center';
-    dl.href = lat.packages.all.download_url;
+    dl.href = p.url;
     dl.target = '_blank';
-    dl.textContent = '下载 ' + latest + (lat.packages.all.size ? ' (' + fmtSize(lat.packages.all.size) + ')' : '');
+    dl.textContent = '下载 ' + latest + archTag(p.arch) + (p.size ? ' (' + fmtSize(p.size) + ')' : '');
     card.appendChild(dl);
-  }
+  });
 
-  // 在 fnOS 安装：优先调用设备内 fnOS 安装接口，失败则回退为下载 FPK
+  // 在 fnOS 安装：优先调用设备内 fnOS 安装接口（由 fnOS 按设备架构自动选包），
+  // 失败则回退为下载 FPK；回退地址取首个可用架构（优先 all，其次 x86/arm）。
   const installBtn = document.createElement('button');
   installBtn.className = 'btn primary';
   installBtn.style.textAlign = 'center';
-  const dlPkg = (latest && lat && lat.packages && lat.packages.all) ? lat.packages.all : null;
+  const dlPkg = pkgs[0] || null;
   installBtn.textContent = '在 fnOS 安装' + (dlPkg && dlPkg.size ? ' (' + fmtSize(dlPkg.size) + ')' : '');
   installBtn.addEventListener('click', () => installApp({
     appId: app.name,
     version: latest || '',
     source: SRC_HOME,
     display: d.display_name || app.name,
-    downloadUrl: dlPkg ? dlPkg.download_url : '',
+    downloadUrl: dlPkg ? dlPkg.url : '',
     btn: installBtn,
   }));
   card.appendChild(installBtn);
@@ -191,12 +208,15 @@ function renderCard(app) {
 function renderVersion(rel, version) {
   const item = document.createElement('div');
   item.className = 'ver-item';
-  const pkg = rel && rel.packages && rel.packages.all;
+  // 历史版本同样可能区分 x86 / arm，按架构分别给出下载链接
+  const links = pkgList(rel && rel.packages).map(p =>
+    `<a href="${esc(p.url)}" target="_blank">下载${esc(version)}${archTag(p.arch)}${p.size ? ' (' + fmtSize(p.size) + ')' : ''}</a>`
+  ).join(' ');
   item.innerHTML =
     `<div class="ver-top"><span class="ver-name">${esc(version)}</span>` +
     `<span class="ver-date">${esc(rel && rel.updated_at || '')}</span></div>` +
     (rel && rel.changelog ? `<div class="changelog">${esc(rel.changelog)}</div>` : '') +
-    (pkg ? `<a href="${esc(pkg.download_url)}" target="_blank">下载${pkg.size ? ' (' + fmtSize(pkg.size) + ')' : ''}</a>` : '');
+    (links || '');
   return item;
 }
 

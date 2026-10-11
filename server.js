@@ -101,14 +101,24 @@ function parseCookies(req) {
   return out;
 }
 
-function readJsonBody(req) {
+function readJsonBody(req, limit = 1024 * 1024) {
   return new Promise(resolve => {
     let data = '';
-    req.on('data', c => (data += c));
+    let aborted = false;
+    req.on('data', c => {
+      if (aborted) return;
+      data += c;
+      if (data.length > limit) {
+        aborted = true; // 超限直接视为无效请求，调用方按缺字段处理
+        resolve({});
+      }
+    });
     req.on('end', () => {
+      if (aborted) return;
       try { resolve(data ? JSON.parse(data) : {}); }
       catch (_) { resolve({}); }
     });
+    req.on('error', () => { if (!aborted) resolve({}); });
   });
 }
 
@@ -273,7 +283,16 @@ function sendFile(res, file) {
       return;
     }
     const ext = path.extname(file).toLowerCase();
-    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+    const headers = {
+      'Content-Type': MIME[ext] || 'application/octet-stream',
+      'X-Content-Type-Options': 'nosniff',
+    };
+    // 仅对页面启用 CSP：本应用脚本/样式均来自同源，图标允许 https 外链
+    if (ext === '.html') {
+      headers['Content-Security-Policy'] =
+        "default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'";
+    }
+    res.writeHead(200, headers);
     res.end(buf);
   });
 }
@@ -313,26 +332,46 @@ function proxyFnOsInstall(base, token, payload, res) {
     method: 'POST',
     headers,
   };
+  let responded = false;
+  const fail = (status, msg) => {
+    if (responded) return;
+    responded = true;
+    res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify({ ok: false, error: msg }));
+  };
   const r = http.request(opts, resp => {
     let data = '';
     resp.on('data', c => (data += c));
     resp.on('end', () => {
+      if (responded) return;
+      responded = true;
       res.writeHead(resp.statusCode, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(data);
     });
   });
-  r.on('error', e => {
-    res.writeHead(502, { 'Content-Type': 'application/json; charset=utf-8' });
-    res.end(JSON.stringify({ ok: false, error: '无法连接 fnOS：' + e.message }));
+  // 30 秒无响应则超时，避免请求永久挂起
+  r.setTimeout(30000, () => {
+    r.destroy();
+    fail(504, 'fnOS 接口响应超时（30 秒）');
   });
-  r.write(JSON.stringify(payload));
-  r.end();
+  r.on('error', e => {
+    fail(502, '无法连接 fnOS：' + e.message);
+  });
+  try {
+    r.write(JSON.stringify(payload));
+    r.end();
+  } catch (e) {
+    fail(502, '发送请求失败：' + e.message);
+  }
 }
 
 // ---------------------------------------------------------------------------
 // 执行脚本并实时回传日志（Server-Sent Events）
 // ---------------------------------------------------------------------------
 let running = false;
+let activeChild = null; // 当前正在执行的子进程，便于断连/退出时清理
+
+const RUN_TIMEOUT = 30 * 60 * 1000; // 单任务最长 30 分钟，超时强杀，避免锁死
 
 const STEPS = {
   pull: [['从 GitHub 拉取', ['pull.js']]],
@@ -342,7 +381,7 @@ const STEPS = {
   oneclick: [['更新仓库（仅最新版本）', ['update.js']], ['推送到 GitHub', ['push.js']]],
 };
 
-function runAction(action, res) {
+function runAction(action, req, res) {
   const steps = STEPS[action];
   if (!steps) {
     res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -356,32 +395,60 @@ function runAction(action, res) {
   }
 
   running = true;
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream; charset=utf-8',
-    'Cache-Control': 'no-cache, no-transform',
-    Connection: 'keep-alive',
-  });
-  // 不发送 retry，避免客户端在连接结束后自动重连导致脚本重复执行
+  let ended = false;
 
   const sse = (event, data) => {
+    if (ended) return;
     res.write(`event: ${event}\n`);
     res.write('data: ' + JSON.stringify(data) + '\n\n');
   };
 
+  // 统一收尾：保证只触发一次，重置锁并关闭连接
   const finish = (ok, info) => {
+    if (ended) return;
+    ended = true;
+    clearTimeout(timer);
     running = false;
-    sse('done', Object.assign({ ok }, info || {}));
-    res.end();
+    activeChild = null;
+    try { sse('done', Object.assign({ ok }, info || {})); res.end(); } catch (_) {}
   };
+
+  // 单任务超时强杀，防止子进程卡死导致锁永久占用
+  const timer = setTimeout(() => {
+    sse('log', { text: `[超时] 任务超过 ${Math.round(RUN_TIMEOUT / 60000)} 分钟仍未结束，已强制终止。\n` });
+    if (activeChild) activeChild.kill('SIGKILL');
+    finish(false, { step: 'timeout' });
+  }, RUN_TIMEOUT);
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream; charset=utf-8',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+    'X-Content-Type-Options': 'nosniff',
+  });
+  // 不发送 retry，避免客户端在连接结束后自动重连导致脚本重复执行
+
+  // 客户端断开（关闭页面/网络中断）：杀掉子进程并释放锁，避免任务卡死、锁永久占用
+  req.on('close', () => {
+    if (ended) return;
+    ended = true;
+    clearTimeout(timer);
+    running = false;
+    if (activeChild) activeChild.kill('SIGTERM');
+    activeChild = null;
+    try { res.end(); } catch (_) {}
+  });
 
   sse('start', { action });
 
   let i = 0;
   const next = () => {
+    if (ended) return;
     if (i >= steps.length) return finish(true);
     const [label, args] = steps[i++];
     sse('step', { label });
     const cp = spawn(process.execPath, args, { cwd: ROOT, env: process.env });
+    activeChild = cp;
     cp.stdout.on('data', d => sse('log', { text: d.toString('utf-8') }));
     cp.stderr.on('data', d => sse('log', { text: d.toString('utf-8') }));
     cp.on('error', e => {
@@ -389,6 +456,7 @@ function runAction(action, res) {
       finish(false, { step: label });
     });
     cp.on('close', code => {
+      if (ended) return;
       if (code !== 0) return finish(false, { step: label, code });
       next();
     });
@@ -498,7 +566,7 @@ const server = http.createServer((req, res) => {
       res.end(JSON.stringify({ error: '未登录' }));
       return;
     }
-    runAction(u.searchParams.get('action') || '', res);
+    runAction(u.searchParams.get('action') || '', req, res);
     return;
   }
   if (p === '/api/install') {
@@ -532,6 +600,26 @@ const server = http.createServer((req, res) => {
   }
   serveStatic(req, res, p);
 });
+
+// ---------------------------------------------------------------------------
+// 进程健壮性：兜底未捕获异常，避免长驻服务因单次错误直接退出
+// ---------------------------------------------------------------------------
+process.on('uncaughtException', e => {
+  console.error('[未捕获异常]', (e && e.stack) || e);
+});
+process.on('unhandledRejection', e => {
+  console.error('[未处理的 Promise 拒绝]', (e && e.stack) || e);
+});
+
+// 优雅退出：杀掉正在执行的子进程，关闭监听端口
+function shutdown(signal) {
+  console.log(`[退出] 收到 ${signal}，正在清理…`);
+  if (activeChild && !activeChild.killed) activeChild.kill('SIGTERM');
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 3000).unref(); // 兜底强制退出
+}
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
 
 server.listen(PORT, () => {
   console.log(`FnDepot 网站已启动: http://localhost:${PORT}`);
