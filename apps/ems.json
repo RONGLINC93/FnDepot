@@ -1,0 +1,36 @@
+{
+  "app_name": "ems",
+  "display_name": "办公设备管理系统",
+  "desc": "纯 Node.js 办公设备管理系统，覆盖设备台账、设备分类、房间视图、图片上传、数据备份恢复与多用户权限，数据以 JSON 本地持久化，开箱即用。",
+  "platform": [
+    "all"
+  ],
+  "categories": [
+    "系统工具"
+  ],
+  "icon_url": "https://raw.githubusercontent.com/RONGLINC93/office-equipment-management/main/fnos/ems/ICON_256.PNG",
+  "readme_url": "https://raw.githubusercontent.com/RONGLINC93/office-equipment-management/main/README.md",
+  "bug_report_url": "https://github.com/RONGLINC93/office-equipment-management/issues",
+  "maintainer": "RONGLINC93",
+  "maintainer_url": "https://github.com/RONGLINC93/office-equipment-management",
+  "distributor": "RONGLINC93",
+  "distributor_url": "https://github.com/RONGLINC93/office-equipment-management",
+  "run_as": "package",
+  "install_type": "",
+  "is_docker": false,
+  "service_port": "9525",
+  "releases": {
+    "1.0.2": {
+      "changelog": "发布版本 v1.0.2\n\n构建时间：2026/10/27 19:01:03",
+      "updated_at": "2026-10-27T19:19:25+08:00",
+      "os_min_version": "1.1.8",
+      "packages": {
+        "all": {
+          "download_url": "https://github.com/RONGLINC93/office-equipment-management/releases/download/v1.0.2/ems-1.0.2.fpk",
+          "sha256": "d840579a048b1728821a11b52a8c0105fdcf3b13949a3a076c2df13e9765a9a2",
+          "size": 1308119
+        }
+      }
+    }
+  }
+}
