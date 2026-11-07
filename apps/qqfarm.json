@@ -1,0 +1,36 @@
+{
+  "app_name": "qqfarm",
+  "display_name": "QQ农场",
+  "desc": "QQ农场私服服务端（Discuz X2 + QQ农场插件），容器化 PHP5 + MariaDB，内置管理面板（服务状态/充值工具/微端说明）",
+  "platform": [
+    "x86"
+  ],
+  "categories": [
+    "系统工具"
+  ],
+  "icon_url": "https://raw.githubusercontent.com/RONGLINC93/QQnc/main/fnos/ICON_256.PNG",
+  "readme_url": "https://raw.githubusercontent.com/RONGLINC93/QQnc/main/README.md",
+  "bug_report_url": "https://github.com/RONGLINC93/QQnc/issues",
+  "maintainer": "local",
+  "maintainer_url": "https://github.com/RONGLINC93/QQnc",
+  "distributor": "RONGLINC93",
+  "distributor_url": "https://github.com/RONGLINC93/QQnc",
+  "run_as": "package",
+  "install_type": "",
+  "is_docker": false,
+  "service_port": "8081",
+  "releases": {
+    "1.0.0": {
+      "changelog": "1.0.0 首次打包：论坛+农场+牧场+管理面板\n\n安装：飞牛 fnOS → 应用中心 → 手动安装 → 选择 `qqfarm-1.0.0.fpk`",
+      "updated_at": "2026-11-07T21:53:40+08:00",
+      "os_min_version": "",
+      "packages": {
+        "all": {
+          "download_url": "https://github.com/RONGLINC93/QQnc/releases/download/v1.0.0/qqfarm-1.0.0.fpk",
+          "sha256": "8188807e7ff844d64d875efbb914fae28a98d27a0916e8d34ef9851b06d473cb",
+          "size": 98566608
+        }
+      }
+    }
+  }
+}
