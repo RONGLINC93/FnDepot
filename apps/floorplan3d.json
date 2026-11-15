@@ -1,0 +1,42 @@
+{
+  "app_name": "floorplan3d",
+  "display_name": "户型装修设计",
+  "desc": "纯前端的户型装修设计工具：2D 平面图摆放家具、拆改墙体、测量尺寸，一键切换 Three.js 3D 场景鸟瞰或第一人称漫游，支持方案保存到服务器。仅供学习交流使用。",
+  "platform": [
+    "arm",
+    "x86"
+  ],
+  "categories": [
+    "系统工具"
+  ],
+  "icon_url": "https://raw.githubusercontent.com/RONGLINC93/floorplan-3d/main/ICON_256.PNG",
+  "readme_url": "https://raw.githubusercontent.com/RONGLINC93/floorplan-3d/main/README.md",
+  "bug_report_url": "https://github.com/RONGLINC93/floorplan-3d/issues",
+  "maintainer": "RONGLINC93",
+  "maintainer_url": "https://github.com/RONGLINC93/floorplan-3d",
+  "distributor": "RONGLINC93",
+  "distributor_url": "https://github.com/RONGLINC93/floorplan-3d",
+  "run_as": "package",
+  "install_type": "",
+  "is_docker": false,
+  "service_port": "8765",
+  "releases": {
+    "1.0.0": {
+      "changelog": "## 户型装修设计 v1.0.0\n\n| 产物 | 适用平台 | 大小 | SHA256 |\n|---|---|---|---|\n| floorplan3d-1.0.0-fnos-x86.fpk | 飞牛 fnOS（x86） | 7.1 MB | 41c052c2fd46761b... |\n| floorplan3d-1.0.0-fnos-arm.fpk | 飞牛 fnOS（ARM） | 7.1 MB | 10cba0e43a8e4b43... |\n| floorplan3d-1.0.0-windows.zip | Windows | 7.3 MB | 6bac6402de46844c... |\n| floorplan3d-1.0.0-linux.tar.gz | Linux | 7.1 MB | 79002c4cd04d765d... |\n| floorplan3d-1.0.0-macos.tar.gz | macOS | 7.1 MB | 4e8f371f3908da83... |\n\n**安装说明**\n- 飞牛 fnOS：应用中心 → 手动安装 → 按 NAS 架构选择 fpk\n- Windows：解压后双击 `启动服务器.bat`（需装有 Python 3）\n- Linux：`./start.sh`（需 python3）\n- macOS：解压后双击 `start.command`（需 python3）\n\n纯 Python 标准库实现，无第三方依赖；仅供学习交流使用。",
+      "updated_at": "2026-11-16T00:45:42+08:00",
+      "os_min_version": "0.9.0",
+      "packages": {
+        "arm": {
+          "download_url": "https://github.com/RONGLINC93/floorplan-3d/releases/download/v1.0.0/floorplan3d-1.0.0-fnos-arm.fpk",
+          "sha256": "10cba0e43a8e4b433b36d6402431a81623a0dd59ed54c63a4e728f04b0be3b1a",
+          "size": 7492033
+        },
+        "x86": {
+          "download_url": "https://github.com/RONGLINC93/floorplan-3d/releases/download/v1.0.0/floorplan3d-1.0.0-fnos-x86.fpk",
+          "sha256": "41c052c2fd46761b2bb975f02bb80b9896fb38153be91b74cb6b065f455b89f9",
+          "size": 7492019
+        }
+      }
+    }
+  }
+}
