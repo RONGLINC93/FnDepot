@@ -37,6 +37,23 @@
           "size": 7492019
         }
       }
+    },
+    "1.0.3": {
+      "changelog": "## 户型装修设计 v1.0.3\n\n| 产物 | 适用平台 | 大小 | SHA256 |\n|---|---|---|---|\n| floorplan3d-1.0.3-fnos-x86.fpk | 飞牛 fnOS（x86） | 7.3 MB | f2427d5dbdcfda0c... |\n| floorplan3d-1.0.3-fnos-arm.fpk | 飞牛 fnOS（ARM） | 7.3 MB | 207fe7a6b010d525... |\n| floorplan3d-1.0.3-windows.zip | Windows | 7.4 MB | 35c6e9dfecb7e394... |\n| floorplan3d-1.0.3-linux.tar.gz | Linux | 7.3 MB | 2636e97f59b4b7de... |\n| floorplan3d-1.0.3-macos.tar.gz | macOS | 7.3 MB | 14d36db4f9e3a663... |\n\n**安装说明**\n- 飞牛 fnOS：应用中心 → 手动安装 → 按 NAS 架构选择 fpk\n- Windows：解压后双击 `启动服务器.bat`（需装有 Python 3）\n- Linux：`./start.sh`（需 python3）\n- macOS：解压后双击 `start.command`（需 python3）\n\n纯 Python 标准库实现，无第三方依赖；仅供学习交流使用。",
+      "updated_at": "2026-11-16T15:43:30+08:00",
+      "os_min_version": "0.9.0",
+      "packages": {
+        "arm": {
+          "download_url": "https://github.com/RONGLINC93/floorplan-3d/releases/download/v1.0.3/floorplan3d-1.0.3-fnos-arm.fpk",
+          "sha256": "207fe7a6b010d52543c89a44e82c42218662636e2bc78baea61cfc5a5da88d7a",
+          "size": 7629631
+        },
+        "x86": {
+          "download_url": "https://github.com/RONGLINC93/floorplan-3d/releases/download/v1.0.3/floorplan3d-1.0.3-fnos-x86.fpk",
+          "sha256": "f2427d5dbdcfda0c3f61ca7a54faec101c4767284d7d10ac8c7ed52d35cf2907",
+          "size": 7629720
+        }
+      }
     }
   }
 }
