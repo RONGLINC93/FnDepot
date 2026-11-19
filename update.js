@@ -6,6 +6,7 @@
  * 已存在应用的分类、图标等人工字段会被保留，不会被覆盖。
  * 用法：node update.js              （默认只同步每个仓库最新版本，或双击 更新仓库.bat）
  *       node update.js --deep      （遍历全部 Release 做完整同步，或双击 深度更新仓库.bat）
+ *       node update.js --no-download（已有应用且资产自带 digest 时不下载 FPK，直接用 GitHub 元数据）
  *
  * @author RONGLINC <chenronglin1993@hotmail.com>
  */
@@ -271,6 +272,7 @@ function dumpJson(file, data) {
     // Release 做完整同步（见 深度更新仓库.bat）。历史版本此前已写入 apps/*.json，
     // 普通更新只需补最新版，可避免逐个下载历史 FPK 导致「更新仓库」越来越慢。
     const DEEP = process.argv.includes('--deep');
+    const NO_DOWNLOAD = process.argv.includes('--no-download');
     const fpkReleases = releases
       .filter(rel => !rel.draft && (rel.assets || []).some(a => /\.fpk$/i.test(a.name)))
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -280,10 +282,18 @@ function dumpJson(file, data) {
       if (!fpkAssets.length) continue;
 
       // 一个 Release 可能同时提供多个架构的安装包（如 fnmonitorpro 的 x86 与 arm）。
-      // 需逐个下载、按文件名识别架构，分别写入 packages.x86 / packages.arm，
-      // 而不是笼统地塞进 packages.all，否则会漏掉另一个架构的包。
+      // 按文件名识别架构，分别写入 packages.x86 / packages.arm，而不是笼统地塞进
+      // packages.all，否则会漏掉另一个架构的包。
+      // --no-download：已有应用且资产自带 digest 时直接用 GitHub 元数据，不下载整包；
+      // 新应用、缺 digest、或需要解析 manifest 时才回退下载。
+      const inferAppName = name => name.replace(/-\d[\w.\-+]*\.fpk$/i, '');
+      const guessedName = inferAppName(fpkAssets[0].name);
+      const knownDetail = !!apps[guessedName] &&
+        fs.existsSync(path.join(ROOT, apps[guessedName].details_url || `apps/${guessedName}.json`));
+      const needManifest = !knownDetail;
+
       let manifest = {};
-      let appname = null;
+      let appname = guessedName;
       const packages = {};
       let manifestParsed = false;
 
@@ -292,6 +302,18 @@ function dumpJson(file, data) {
         if (packages[arch]) continue; // 同架构只取第一个匹配的包
 
         let digest = (asset.digest || '').replace(/^sha256:/i, '');
+        // 没有 digest 必须下载算哈希；新应用必须下载解析 manifest。
+        // --no-download 且有 digest 的包可以直接用 Release 元数据。
+        const mustDownload = !NO_DOWNLOAD || !digest || (needManifest && !manifestParsed);
+        if (!mustDownload) {
+          packages[arch] = {
+            download_url: asset.browser_download_url,
+            sha256: digest,
+            size: asset.size,
+          };
+          continue;
+        }
+
         let buf;
         try {
           buf = (await request(asset.browser_download_url)).body;
@@ -303,7 +325,7 @@ function dumpJson(file, data) {
         if (!manifestParsed) {
           const text = readFromTarGz(buf, ['manifest', 'manifest.json']);
           manifest = parseManifest(text);
-          appname = manifest.appname || asset.name.replace(/-\d[\w.\-+]*\.fpk$/i, '');
+          if (manifest.appname) appname = manifest.appname;
           manifestParsed = true;
         }
         // 优先用实际下载内容的哈希，其次用 Release 提供的 digest
@@ -315,7 +337,7 @@ function dumpJson(file, data) {
         };
       }
 
-      if (!appname) {
+      if (!appname || !Object.keys(packages).length) {
         console.log(`  [跳过] ${repo.name} ${rel.tag_name}：未能解析任何 FPK 安装包`);
         continue;
       }
@@ -329,6 +351,9 @@ function dumpJson(file, data) {
       let detail;
       if (fs.existsSync(detailPath)) {
         detail = JSON.parse(fs.readFileSync(detailPath, 'utf-8'));
+      } else if (!manifestParsed) {
+        console.log(`  [跳过] ${repo.name} ${rel.tag_name}：未下载 FPK 且本地无 ${appname} 详情，无法新建应用`);
+        continue;
       } else {
         // 新应用：图标优先尝试仓库内常见图标文件名，全部取不到再用 GitHub 头像兜底
         const icon = await findIcon(repo, appname);
@@ -383,7 +408,7 @@ function dumpJson(file, data) {
         appReleases[version] = {
           changelog: sourceChangelog || `更新到 ${version}。`,
           updated_at: localStamp(),
-          os_min_version: manifest.os_min_version || '',
+          os_min_version: manifest.os_min_version || (prev && prev.os_min_version) || '',
           packages,
         };
         (prev ? updated : added).push(`${appname} ${version}`);
