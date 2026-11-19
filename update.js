@@ -4,9 +4,9 @@
  * 再把新应用或新版本写入 fnpack.json 与 apps/*.json。
  *
  * 已存在应用的分类、图标等人工字段会被保留，不会被覆盖。
- * 用法：node update.js              （默认只同步每个仓库最新版本，或双击 更新仓库.bat）
+ * 用法：node update.js              （默认只同步最新版本；已有应用直接用 GitHub digest，不下载 FPK）
  *       node update.js --deep      （遍历全部 Release 做完整同步，或双击 深度更新仓库.bat）
- *       node update.js --no-download（已有应用且资产自带 digest 时不下载 FPK，直接用 GitHub 元数据）
+ *       node update.js --download  （强制下载每个 FPK，按包内 manifest 校对并计算 sha256）
  *
  * @author RONGLINC <chenronglin1993@hotmail.com>
  */
@@ -272,7 +272,8 @@ function dumpJson(file, data) {
     // Release 做完整同步（见 深度更新仓库.bat）。历史版本此前已写入 apps/*.json，
     // 普通更新只需补最新版，可避免逐个下载历史 FPK 导致「更新仓库」越来越慢。
     const DEEP = process.argv.includes('--deep');
-    const NO_DOWNLOAD = process.argv.includes('--no-download');
+    // 默认不下载；传 --download 才强制下载每个 FPK（新应用/缺 digest 仍会自动回退下载）。
+    const NO_DOWNLOAD = !process.argv.includes('--download');
     const fpkReleases = releases
       .filter(rel => !rel.draft && (rel.assets || []).some(a => /\.fpk$/i.test(a.name)))
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -284,8 +285,8 @@ function dumpJson(file, data) {
       // 一个 Release 可能同时提供多个架构的安装包（如 fnmonitorpro 的 x86 与 arm）。
       // 按文件名识别架构，分别写入 packages.x86 / packages.arm，而不是笼统地塞进
       // packages.all，否则会漏掉另一个架构的包。
-      // --no-download：已有应用且资产自带 digest 时直接用 GitHub 元数据，不下载整包；
-      // 新应用、缺 digest、或需要解析 manifest 时才回退下载。
+      // 默认：已有应用且资产自带 digest 时直接用 GitHub 元数据，不下载整包；
+      // 新应用、缺 digest、或传 --download 时才下载并解析 manifest。
       const inferAppName = name => name.replace(/-\d[\w.\-+]*\.fpk$/i, '');
       const guessedName = inferAppName(fpkAssets[0].name);
       const knownDetail = !!apps[guessedName] &&
@@ -303,7 +304,7 @@ function dumpJson(file, data) {
 
         let digest = (asset.digest || '').replace(/^sha256:/i, '');
         // 没有 digest 必须下载算哈希；新应用必须下载解析 manifest。
-        // --no-download 且有 digest 的包可以直接用 Release 元数据。
+        // 默认有 digest 的包可以直接用 Release 元数据。
         const mustDownload = !NO_DOWNLOAD || !digest || (needManifest && !manifestParsed);
         if (!mustDownload) {
           packages[arch] = {
